@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebsiteForge - SME Website Generator</title>
+  <meta name="description" content="Generate professional websites for small businesses using AI">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#6366f1',
+            secondary: '#8b5cf6',
+            accent: '#ec4899',
+            sidebar: '#1e1b4b',
+            'sidebar-hover': '#312e81',
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+
+    .gradient-bg {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+    }
+
+    .glass {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+    }
+
+    .progress-bar {
+      transition: width 0.5s ease-in-out;
+    }
+
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 20px rgba(99, 102, 241, 0.4); }
+      50% { box-shadow: 0 0 40px rgba(99, 102, 241, 0.6); }
+    }
+
+    .processing {
+      animation: pulse-glow 2s infinite;
+    }
+
+    .fade-in {
+      animation: fadeIn 0.3s ease-in;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .sidebar-item {
+      transition: all 0.2s ease;
+    }
+
+    .sidebar-item:hover {
+      background: rgba(99, 102, 241, 0.2);
+    }
+
+    .sidebar-item.active {
+      background: rgba(99, 102, 241, 0.3);
+      border-left: 3px solid #6366f1;
+    }
+
+    .submenu {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+
+    .submenu.open {
+      max-height: 300px;
+    }
+
+    .submenu-item {
+      transition: all 0.2s ease;
+    }
+
+    .submenu-item:hover {
+      background: rgba(99, 102, 241, 0.15);
+    }
+
+    .submenu-item.active {
+      background: rgba(99, 102, 241, 0.25);
+      color: #a5b4fc;
+    }
+
+    .status-badge {
+      font-size: 0.65rem;
+      padding: 2px 6px;
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-gray-100">
+
+  <div class="flex min-h-screen">
+    <!-- Left Sidebar -->
+    <aside id="sidebar" class="w-64 bg-sidebar text-white flex flex-col fixed h-full z-10">
+      <!-- Logo -->
+      <div class="p-4 border-b border-white/10">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
+            <span class="text-xl">W</span>
+          </div>
+          <div>
+            <h1 class="text-lg font-bold">WebsiteForge</h1>
+            <p class="text-xs text-white/60">SME Generator</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- New Site Button -->
+      <div class="p-4">
+        <button id="new-site-sidebar-btn" class="w-full py-2.5 px-4 bg-primary hover:bg-primary/90 text-white font-semibold rounded-lg transition flex items-center justify-center gap-2">
+          <span>+</span> New Website
+        </button>
+      </div>
+
+      <!-- Sites List -->
+      <div class="flex-1 overflow-y-auto">
+        <div class="px-4 py-2">
+          <h3 class="text-xs font-semibold text-white/40 uppercase tracking-wider">Your Sites</h3>
+        </div>
+        <nav id="sites-list" class="space-y-1 px-2">
+          <!-- Sites will be dynamically inserted here -->
+          <div id="no-sites-message" class="px-4 py-8 text-center text-white/40 text-sm">
+            <p>No sites generated yet.</p>
+            <p class="mt-1">Click "New Website" to start!</p>
+          </div>
+        </nav>
+      </div>
+
+      <!-- User Section -->
+      <div class="p-4 border-t border-white/10">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 bg-primary/30 rounded-full flex items-center justify-center">
+            <span class="text-sm">U</span>
+          </div>
+          <div class="flex-1">
+            <p class="text-sm font-medium">Dashboard</p>
+            <p class="text-xs text-white/40">v1.0.0</p>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 ml-64">
+      <!-- Top Bar -->
+      <header class="bg-white border-b border-gray-200 px-6 py-4 sticky top-0 z-5">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 id="page-title" class="text-xl font-bold text-gray-800">Dashboard</h2>
+            <p id="page-subtitle" class="text-sm text-gray-500">Manage your generated websites</p>
+          </div>
+          <div class="flex items-center gap-4">
+            <span id="active-site-badge" class="hidden px-3 py-1 bg-primary/10 text-primary text-sm font-medium rounded-full"></span>
+          </div>
+        </div>
+      </header>
+
+      <!-- Content Container -->
+      <div class="p-6">
+        <!-- Dashboard Home (default view) -->
+        <div id="dashboard-home" class="fade-in">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <span class="text-2xl">W</span>
+                </div>
+                <div>
+                  <p id="total-sites-count" class="text-2xl font-bold text-gray-800">0</p>
+                  <p class="text-sm text-gray-500">Total Sites</p>
+                </div>
+              </div>
+            </div>
+            <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                  <span class="text-2xl">L</span>
+                </div>
+                <div>
+                  <p id="live-sites-count" class="text-2xl font-bold text-gray-800">0</p>
+                  <p class="text-sm text-gray-500">Live Sites</p>
+                </div>
+              </div>
+            </div>
+            <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <span class="text-2xl">Q</span>
+                </div>
+                <div>
+                  <p id="avg-quality-score" class="text-2xl font-bold text-gray-800">--</p>
+                  <p class="text-sm text-gray-500">Avg Quality</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Actions -->
+          <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <button id="quick-new-site" class="p-4 border-2 border-dashed border-gray-200 rounded-xl hover:border-primary hover:bg-primary/5 transition text-left group">
+                <span class="text-2xl mb-2 block">+</span>
+                <p class="font-semibold text-gray-800 group-hover:text-primary">Generate New Site</p>
+                <p class="text-sm text-gray-500">Create a website for a new business</p>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Generator Form Section -->
+        <div id="generator-section" class="hidden fade-in">
+          <div class="max-w-2xl mx-auto">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+              <div class="text-center mb-8">
+                <h2 class="text-2xl font-bold text-gray-800 mb-2">Generate a Website</h2>
+                <p class="text-gray-600">Enter business details and we'll create a stunning website</p>
+              </div>
+
+              <form id="generate-form" class="space-y-5">
+                <!-- Business Name -->
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    Business Name <span class="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="businessName"
+                    name="businessName"
+                    required
+                    placeholder="e.g. Thompson's Heating & Plumbing"
+                    class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/20 outline-none transition"
+                  >
+                </div>
+
+                <!-- Location -->
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-2">Location</label>
+                  <input
+                    type="text"
+                    id="location"
+                    name="location"
+                    placeholder="e.g. Manchester, UK"
+                    class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/20 outline-none transition"
+                  >
+                </div>
+
+                <!-- Google Maps Link -->
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    Google Maps / Business Profile Link
+                  </label>
+                  <input
+                    type="url"
+                    id="googleMapsUrl"
+                    name="googleMapsUrl"
+                    placeholder="https://maps.app.goo.gl/..."
+                    class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/20 outline-none transition"
+                  >
+                  <p class="text-xs text-gray-500 mt-1">Paste share link from Google Maps</p>
+                </div>
+
+                <!-- Social Links Grid -->
+                <div class="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Website URL</label>
+                    <input
+                      type="url"
+                      id="websiteUrl"
+                      name="websiteUrl"
+                      placeholder="https://example.com"
+                      class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/20 outline-none transition"
+                    >
+                  </div>
+                  <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Facebook Page</label>
+                    <input
+                      type="url"
+                      id="facebookUrl"
+                      name="facebookUrl"
+                      placeholder="https://facebook.com/business"
+                      class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/20 outline-none transition"
+                    >
+                  </div>
+                  <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Instagram</label>
+                    <input
+                      type="text"
+                      id="instagramUrl"
+                      name="instagramUrl"
+                      placeholder="@username or URL"
+                      class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/20 outline-none transition"
+                    >
+                  </div>
+                  <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">LinkedIn</label>
+                    <input
+                      type="url"
+                      id="linkedinUrl"
+                      name="linkedinUrl"
+                      placeholder="https://linkedin.com/company/..."
+                      class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/20 outline-none transition"
+                    >
+                  </div>
+                </div>
+
+                <!-- Additional Info -->
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-2">Additional Information</label>
+                  <textarea
+                    id="additionalInfo"
+                    name="additionalInfo"
+                    rows="3"
+                    placeholder="Any specific services, unique selling points, or style preferences..."
+                    class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/20 outline-none transition resize-none"
+                  ></textarea>
+                </div>
+
+                <!-- Submit Button -->
+                <button
+                  type="submit"
+                  id="submit-btn"
+                  class="w-full py-4 px-8 bg-gradient-to-r from-primary to-secondary text-white font-bold text-lg rounded-xl hover:opacity-90 transition transform hover:scale-[1.01] shadow-lg"
+                >
+                  Generate Website
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <!-- Progress Section -->
+        <div id="progress-section" class="hidden fade-in">
+          <div class="max-w-xl mx-auto">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+              <div class="text-center">
+                <div id="progress-icon" class="w-20 h-20 mx-auto mb-6 bg-primary/10 rounded-full flex items-center justify-center processing">
+                  <span class="text-4xl" id="status-emoji">Z</span>
+                </div>
+
+                <h2 id="progress-title" class="text-xl font-bold text-gray-800 mb-2">Generating your website...</h2>
+                <p id="progress-step" class="text-gray-600 mb-8">Starting up...</p>
+
+                <div class="w-full bg-gray-200 rounded-full h-3 mb-4 overflow-hidden">
+                  <div id="progress-bar" class="progress-bar bg-gradient-to-r from-primary to-secondary h-3 rounded-full" style="width: 0%"></div>
+                </div>
+                <p id="progress-percent" class="text-sm text-gray-500">0%</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Site Management Sections -->
+        <div id="site-overview" class="hidden fade-in">
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2 space-y-6">
+              <!-- Site Info Card -->
+              <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                <div class="flex items-start justify-between mb-4">
+                  <div>
+                    <h3 id="site-name-display" class="text-xl font-bold text-gray-800"></h3>
+                    <p id="site-location-display" class="text-gray-500"></p>
+                  </div>
+                  <span id="site-status-badge" class="status-badge bg-green-100 text-green-700">Live</span>
+                </div>
+                <div class="flex gap-3">
+                  <a id="site-live-link" href="#" target="_blank" class="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition">
+                    View Live Site
+                  </a>
+                  <a id="site-preview-link" href="#" target="_blank" class="px-4 py-2 border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition">
+                    Local Preview
+                  </a>
+                </div>
+              </div>
+
+              <!-- Quick Stats -->
+              <div class="grid grid-cols-3 gap-4">
+                <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 text-center">
+                  <p id="site-quality" class="text-2xl font-bold text-primary">--</p>
+                  <p class="text-xs text-gray-500">Quality Score</p>
+                </div>
+                <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 text-center">
+                  <p class="text-2xl font-bold text-green-600">--</p>
+                  <p class="text-xs text-gray-500">Visitors</p>
+                </div>
+                <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 text-center">
+                  <p class="text-2xl font-bold text-blue-600">--</p>
+                  <p class="text-xs text-gray-500">Leads</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Column - Quick Links -->
+            <div class="space-y-4">
+              <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                <h4 class="font-semibold text-gray-800 mb-3">Management</h4>
+                <div class="space-y-2">
+                  <button data-section="payments" class="submenu-nav w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 transition text-sm text-gray-700">
+                    Payments
+                  </button>
+                  <button data-section="leads" class="submenu-nav w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 transition text-sm text-gray-700">
+                    Leads
+                  </button>
+                  <button data-section="ai-receptionist" class="submenu-nav w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 transition text-sm text-gray-700">
+                    AI Receptionist
+                  </button>
+                </div>
+              </div>
+              <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                <h4 class="font-semibold text-gray-800 mb-3">Environments</h4>
+                <div class="space-y-2">
+                  <button data-section="staging" class="submenu-nav w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 transition text-sm text-gray-700">
+                    Staging
+                  </button>
+                  <button data-section="production" class="submenu-nav w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 transition text-sm text-gray-700">
+                    Production
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Payments Section -->
+        <div id="payments-section" class="hidden fade-in">
+          <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+            <h3 class="text-lg font-bold text-gray-800 mb-4">Payments</h3>
+            <div class="text-center py-12 text-gray-500">
+              <span class="text-4xl mb-4 block">$</span>
+              <p class="font-medium">Payment integration coming soon</p>
+              <p class="text-sm">Accept payments directly through your website</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Leads Section -->
+        <div id="leads-section" class="hidden fade-in">
+          <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+            <h3 class="text-lg font-bold text-gray-800 mb-4">Leads</h3>
+            <div class="text-center py-12 text-gray-500">
+              <span class="text-4xl mb-4 block">U</span>
+              <p class="font-medium">No leads captured yet</p>
+              <p class="text-sm">Form submissions will appear here</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- AI Receptionist Section -->
+        <div id="ai-receptionist-section" class="hidden fade-in">
+          <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+            <h3 class="text-lg font-bold text-gray-800 mb-4">AI Receptionist</h3>
+            <div class="text-center py-12 text-gray-500">
+              <span class="text-4xl mb-4 block">AI</span>
+              <p class="font-medium">AI Receptionist coming soon</p>
+              <p class="text-sm">24/7 automated customer support for your business</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Staging Section -->
+        <div id="staging-section" class="hidden fade-in">
+          <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+            <h3 class="text-lg font-bold text-gray-800 mb-4">Staging Environment</h3>
+            <div class="space-y-4">
+              <p class="text-gray-600">Test changes before going live</p>
+              <div class="bg-gray-50 rounded-lg p-4">
+                <p class="text-sm text-gray-500 mb-2">Staging URL</p>
+                <p id="staging-url" class="font-mono text-sm text-primary">--</p>
+              </div>
+              <button class="px-4 py-2 bg-yellow-500 text-white rounded-lg text-sm font-medium hover:bg-yellow-600 transition">
+                Deploy to Staging
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Production Section -->
+        <div id="production-section" class="hidden fade-in">
+          <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+            <h3 class="text-lg font-bold text-gray-800 mb-4">Production Environment</h3>
+            <div class="space-y-4">
+              <p class="text-gray-600">Your live website</p>
+              <div class="bg-gray-50 rounded-lg p-4">
+                <p class="text-sm text-gray-500 mb-2">Production URL</p>
+                <p id="production-url" class="font-mono text-sm text-primary">--</p>
+              </div>
+              <div class="flex gap-3">
+                <button class="px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600 transition">
+                  Promote from Staging
+                </button>
+                <button class="px-4 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 transition">
+                  Rollback
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Error Section -->
+        <div id="error-section" class="hidden fade-in">
+          <div class="max-w-xl mx-auto">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center">
+              <div class="w-20 h-20 mx-auto mb-6 bg-red-100 rounded-full flex items-center justify-center">
+                <span class="text-4xl">!</span>
+              </div>
+              <h2 class="text-xl font-bold text-gray-800 mb-2">Generation Failed</h2>
+              <p id="error-message" class="text-gray-600 mb-6">Something went wrong. Please try again.</p>
+              <button id="retry-btn" class="px-6 py-3 bg-primary text-white font-semibold rounded-xl hover:bg-primary/90 transition">
+                Try Again
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const API_BASE = '/api';
+
+    // State
+    let sites = JSON.parse(localStorage.getItem('websiteforge_sites') || '[]');
+    let currentJobId = null;
+    let pollInterval = null;
+    let activeSiteId = null;
+    let activeSection = 'dashboard';
+
+    // DOM Elements
+    const sitesList = document.getElementById('sites-list');
+    const noSitesMessage = document.getElementById('no-sites-message');
+    const pageTitle = document.getElementById('page-title');
+    const pageSubtitle = document.getElementById('page-subtitle');
+    const activeSiteBadge = document.getElementById('active-site-badge');
+
+    // Sections
+    const sections = {
+      'dashboard-home': document.getElementById('dashboard-home'),
+      'generator': document.getElementById('generator-section'),
+      'progress': document.getElementById('progress-section'),
+      'overview': document.getElementById('site-overview'),
+      'payments': document.getElementById('payments-section'),
+      'leads': document.getElementById('leads-section'),
+      'ai-receptionist': document.getElementById('ai-receptionist-section'),
+      'staging': document.getElementById('staging-section'),
+      'production': document.getElementById('production-section'),
+      'error': document.getElementById('error-section'),
+    };
+
+    // Initialize
+    async function init() {
+      // Try to sync with database first
+      await syncWithDatabase();
+
+      renderSitesList();
+      updateDashboardStats();
+      showSection('dashboard-home');
+
+      // Event listeners
+      document.getElementById('new-site-sidebar-btn').addEventListener('click', showGenerator);
+      document.getElementById('quick-new-site').addEventListener('click', showGenerator);
+      document.getElementById('generate-form').addEventListener('submit', handleGenerate);
+      document.getElementById('retry-btn').addEventListener('click', showGenerator);
+
+      // Submenu navigation
+      document.querySelectorAll('.submenu-nav').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const section = btn.dataset.section;
+          showSection(section);
+          updatePageHeader(section);
+        });
+      });
+    }
+
+    // Sync sites from database
+    async function syncWithDatabase() {
+      try {
+        const response = await fetch(`${API_BASE}/sites`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.sites && data.sites.length > 0) {
+            // Merge database sites with local sites
+            const dbSites = data.sites.map(s => ({
+              id: s.id,
+              jobId: s.jobId,
+              name: s.name,
+              location: s.location,
+              url: s.url,
+              deployed: s.deployed,
+              qualityScore: s.qualityScore,
+              createdAt: s.createdAt,
+            }));
+
+            // Merge: keep local sites not in DB, add DB sites
+            const localJobIds = new Set(sites.map(s => s.jobId));
+            const dbJobIds = new Set(dbSites.map(s => s.jobId));
+
+            const merged = [
+              ...dbSites,
+              ...sites.filter(s => !dbJobIds.has(s.jobId)),
+            ];
+
+            sites = merged.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            localStorage.setItem('websiteforge_sites', JSON.stringify(sites));
+            console.log('Synced with database:', sites.length, 'sites');
+          }
+        }
+      } catch (err) {
+        console.log('Database sync skipped (offline or no DB)');
+      }
+    }
+
+    // Render sites list in sidebar
+    function renderSitesList() {
+      const existingSiteItems = sitesList.querySelectorAll('.site-item');
+      existingSiteItems.forEach(item => item.remove());
+
+      if (sites.length === 0) {
+        noSitesMessage.classList.remove('hidden');
+        return;
+      }
+
+      noSitesMessage.classList.add('hidden');
+
+      sites.forEach(site => {
+        const siteEl = document.createElement('div');
+        siteEl.className = 'site-item';
+        siteEl.innerHTML = `
+          <div class="sidebar-item rounded-lg cursor-pointer ${activeSiteId === site.id ? 'active' : ''}" data-site-id="${site.id}">
+            <div class="px-3 py-2.5 flex items-center justify-between">
+              <div class="flex items-center gap-2 min-w-0">
+                <div class="w-8 h-8 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <span class="text-xs text-white">${site.name.charAt(0).toUpperCase()}</span>
+                </div>
+                <div class="truncate">
+                  <p class="text-sm font-medium truncate">${site.name}</p>
+                  <p class="text-xs text-white/40">${site.location || 'No location'}</p>
+                </div>
+              </div>
+              <span class="w-2 h-2 rounded-full ${site.deployed ? 'bg-green-400' : 'bg-yellow-400'} flex-shrink-0"></span>
+            </div>
+            <div class="submenu ${activeSiteId === site.id ? 'open' : ''}" id="submenu-${site.id}">
+              <div class="pl-12 pr-3 pb-2 space-y-1">
+                <button class="submenu-item w-full text-left px-3 py-1.5 rounded text-xs text-white/70" data-site="${site.id}" data-section="overview">Overview</button>
+                <button class="submenu-item w-full text-left px-3 py-1.5 rounded text-xs text-white/70" data-site="${site.id}" data-section="payments">Payments</button>
+                <button class="submenu-item w-full text-left px-3 py-1.5 rounded text-xs text-white/70" data-site="${site.id}" data-section="leads">Leads</button>
+                <button class="submenu-item w-full text-left px-3 py-1.5 rounded text-xs text-white/70" data-site="${site.id}" data-section="ai-receptionist">AI Receptionist</button>
+                <button class="submenu-item w-full text-left px-3 py-1.5 rounded text-xs text-white/70" data-site="${site.id}" data-section="staging">Staging</button>
+                <button class="submenu-item w-full text-left px-3 py-1.5 rounded text-xs text-white/70" data-site="${site.id}" data-section="production">Production</button>
+              </div>
+            </div>
+          </div>
+        `;
+
+        // Site click handler
+        const sidebarItem = siteEl.querySelector('.sidebar-item');
+        sidebarItem.addEventListener('click', (e) => {
+          if (e.target.classList.contains('submenu-item')) return;
+          toggleSite(site.id);
+        });
+
+        // Submenu item handlers
+        siteEl.querySelectorAll('.submenu-item').forEach(btn => {
+          btn.addEventListener('click', () => {
+            activeSiteId = btn.dataset.site;
+            showSiteSection(btn.dataset.site, btn.dataset.section);
+          });
+        });
+
+        sitesList.appendChild(siteEl);
+      });
+    }
+
+    // Toggle site expansion
+    function toggleSite(siteId) {
+      if (activeSiteId === siteId) {
+        activeSiteId = null;
+        showSection('dashboard-home');
+        updatePageHeader('dashboard');
+      } else {
+        activeSiteId = siteId;
+        showSiteSection(siteId, 'overview');
+      }
+      renderSitesList();
+    }
+
+    // Show site section
+    function showSiteSection(siteId, section) {
+      const site = sites.find(s => s.id === siteId);
+      if (!site) return;
+
+      activeSiteId = siteId;
+      activeSiteBadge.textContent = site.name;
+      activeSiteBadge.classList.remove('hidden');
+
+      if (section === 'overview') {
+        document.getElementById('site-name-display').textContent = site.name;
+        document.getElementById('site-location-display').textContent = site.location || '';
+        document.getElementById('site-quality').textContent = site.qualityScore || '--';
+        document.getElementById('site-live-link').href = site.url || '#';
+        document.getElementById('site-preview-link').href = `${API_BASE}/jobs/${site.jobId}/preview`;
+
+        const statusBadge = document.getElementById('site-status-badge');
+        if (site.deployed) {
+          statusBadge.className = 'status-badge bg-green-100 text-green-700';
+          statusBadge.textContent = 'Live';
+        } else {
+          statusBadge.className = 'status-badge bg-yellow-100 text-yellow-700';
+          statusBadge.textContent = 'Preview Only';
+        }
+      }
+
+      if (section === 'staging') {
+        document.getElementById('staging-url').textContent = site.url ? site.url.replace('.vercel.app', '-staging.vercel.app') : '--';
+      }
+
+      if (section === 'production') {
+        document.getElementById('production-url').textContent = site.url || '--';
+      }
+
+      showSection(section);
+      updatePageHeader(section, site.name);
+      renderSitesList();
+    }
+
+    // Show section helper
+    function showSection(section) {
+      Object.values(sections).forEach(s => s.classList.add('hidden'));
+
+      const sectionEl = sections[section];
+      if (sectionEl) {
+        sectionEl.classList.remove('hidden');
+        sectionEl.classList.add('fade-in');
+      }
+
+      activeSection = section;
+    }
+
+    // Update page header
+    function updatePageHeader(section, siteName = null) {
+      const titles = {
+        'dashboard': { title: 'Dashboard', subtitle: 'Manage your generated websites' },
+        'dashboard-home': { title: 'Dashboard', subtitle: 'Manage your generated websites' },
+        'generator': { title: 'New Website', subtitle: 'Generate a professional website' },
+        'overview': { title: siteName || 'Site Overview', subtitle: 'Site management and analytics' },
+        'payments': { title: 'Payments', subtitle: `${siteName || 'Site'} - Payment settings` },
+        'leads': { title: 'Leads', subtitle: `${siteName || 'Site'} - Lead management` },
+        'ai-receptionist': { title: 'AI Receptionist', subtitle: `${siteName || 'Site'} - Automated support` },
+        'staging': { title: 'Staging', subtitle: `${siteName || 'Site'} - Test environment` },
+        'production': { title: 'Production', subtitle: `${siteName || 'Site'} - Live environment` },
+      };
+
+      const header = titles[section] || titles['dashboard'];
+      pageTitle.textContent = header.title;
+      pageSubtitle.textContent = header.subtitle;
+
+      if (!siteName && section !== 'generator') {
+        activeSiteBadge.classList.add('hidden');
+      }
+    }
+
+    // Update dashboard stats
+    function updateDashboardStats() {
+      document.getElementById('total-sites-count').textContent = sites.length;
+      document.getElementById('live-sites-count').textContent = sites.filter(s => s.deployed).length;
+
+      const avgQuality = sites.length > 0
+        ? Math.round(sites.reduce((sum, s) => sum + (s.qualityScore || 0), 0) / sites.length)
+        : '--';
+      document.getElementById('avg-quality-score').textContent = avgQuality;
+    }
+
+    // Show generator
+    function showGenerator() {
+      activeSiteId = null;
+      activeSiteBadge.classList.add('hidden');
+      showSection('generator');
+      updatePageHeader('generator');
+      renderSitesList();
+    }
+
+    // Update progress UI
+    function updateProgress(status) {
+      document.getElementById('progress-bar').style.width = `${status.progress}%`;
+      document.getElementById('progress-percent').textContent = `${status.progress}%`;
+      document.getElementById('progress-step').textContent = status.currentStep || 'Processing...';
+
+      const emojis = { 'scraping': 'S', 'processing': 'P', 'generating': 'G', 'deploying': 'D' };
+      document.getElementById('status-emoji').textContent = emojis[status.status] || 'Z';
+
+      const titles = {
+        'scraping': 'Gathering business data...',
+        'processing': 'Analyzing information...',
+        'generating': 'Creating your website...',
+        'deploying': 'Deploying to the web...',
+      };
+      document.getElementById('progress-title').textContent = titles[status.status] || 'Generating your website...';
+    }
+
+    // Poll job status
+    async function pollJobStatus(jobId, businessName, location) {
+      try {
+        const response = await fetch(`${API_BASE}/jobs/${jobId}`);
+        const status = await response.json();
+
+        updateProgress(status);
+
+        if (status.status === 'complete' || status.status === 'failed') {
+          clearInterval(pollInterval);
+
+          const deployed = status.status === 'complete' && status.result?.siteUrl;
+
+          // Save site
+          const newSite = {
+            id: jobId,
+            jobId: jobId,
+            name: businessName,
+            location: location,
+            url: status.result?.siteUrl || status.result?.previewUrl,
+            deployed: deployed,
+            qualityScore: status.result?.qualityScore || 0,
+            createdAt: new Date().toISOString(),
+          };
+
+          sites.unshift(newSite);
+          localStorage.setItem('websiteforge_sites', JSON.stringify(sites));
+
+          renderSitesList();
+          updateDashboardStats();
+
+          // Show site overview
+          showSiteSection(jobId, 'overview');
+        }
+
+      } catch (err) {
+        console.error('Poll error:', err);
+      }
+    }
+
+    // Handle form submission
+    async function handleGenerate(e) {
+      e.preventDefault();
+
+      const formData = new FormData(e.target);
+      const data = Object.fromEntries(formData.entries());
+      const businessName = data.businessName;
+      const location = data.location;
+
+      showSection('progress');
+      updatePageHeader('generator');
+      updateProgress({ progress: 5, currentStep: 'Starting generation...', status: 'pending' });
+
+      try {
+        const response = await fetch(`${API_BASE}/generate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to start generation');
+        }
+
+        currentJobId = result.jobId;
+        pollInterval = setInterval(() => pollJobStatus(currentJobId, businessName, location), 2000);
+
+      } catch (err) {
+        document.getElementById('error-message').textContent = err.message;
+        showSection('error');
+      }
+    }
+
+    // Initialize app
+    init();
+  </script>
+</body>
+</html>
