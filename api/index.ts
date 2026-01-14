@@ -111,6 +111,84 @@ app.get('/api/jobs/:jobId/preview', (req, res) => {
   res.send(job.generatedSite.html);
 });
 
+// Design system configurations by business type
+const designSystems: Record<string, {
+  fonts: { display: string; body: string; accent?: string };
+  palette: { bg: string; surface: string; text: string; muted: string; primary: string; accent: string };
+  style: string;
+  heroStyle: string;
+  effects: string[];
+}> = {
+  restaurant: {
+    fonts: { display: 'Playfair Display', body: 'Source Sans 3', accent: 'Caveat' },
+    palette: { bg: '#1a1814', surface: '#252119', text: '#f5f0e8', muted: '#9c9589', primary: '#c9a227', accent: '#8b2635' },
+    style: 'warm-luxury',
+    heroStyle: 'full-bleed image with elegant overlay gradient',
+    effects: ['subtle grain texture', 'warm glow shadows', 'elegant dividers'],
+  },
+  retail: {
+    fonts: { display: 'Syne', body: 'Work Sans' },
+    palette: { bg: '#fafaf9', surface: '#ffffff', text: '#171717', muted: '#737373', primary: '#171717', accent: '#ea580c' },
+    style: 'clean-modern',
+    heroStyle: 'asymmetric product showcase with bold typography',
+    effects: ['crisp shadows', 'hover scale transforms', 'marquee animations'],
+  },
+  healthcare: {
+    fonts: { display: 'Plus Jakarta Sans', body: 'Nunito Sans' },
+    palette: { bg: '#f0fdf4', surface: '#ffffff', text: '#14532d', muted: '#6b7280', primary: '#059669', accent: '#0891b2' },
+    style: 'calm-professional',
+    heroStyle: 'soft gradients with trust-building imagery',
+    effects: ['gentle shadows', 'calming transitions', 'rounded corners'],
+  },
+  professional: {
+    fonts: { display: 'Instrument Serif', body: 'Geist' },
+    palette: { bg: '#09090b', surface: '#18181b', text: '#fafafa', muted: '#71717a', primary: '#a78bfa', accent: '#22d3ee' },
+    style: 'dark-sophisticated',
+    heroStyle: 'dramatic typography with subtle gradient mesh',
+    effects: ['glass morphism', 'glow effects', 'smooth reveals'],
+  },
+  creative: {
+    fonts: { display: 'Space Grotesk', body: 'Inter Tight' },
+    palette: { bg: '#0c0a09', surface: '#1c1917', text: '#fafaf9', muted: '#a8a29e', primary: '#f97316', accent: '#eab308' },
+    style: 'bold-editorial',
+    heroStyle: 'oversized typography with dynamic grid breaking',
+    effects: ['noise overlay', 'dramatic shadows', 'staggered animations'],
+  },
+  beauty: {
+    fonts: { display: 'Cormorant Garamond', body: 'Lato' },
+    palette: { bg: '#fdf4ff', surface: '#ffffff', text: '#581c87', muted: '#9ca3af', primary: '#c026d3', accent: '#f472b6' },
+    style: 'soft-elegant',
+    heroStyle: 'dreamy gradients with elegant serif headlines',
+    effects: ['soft blurs', 'delicate shadows', 'fade transitions'],
+  },
+  fitness: {
+    fonts: { display: 'Bebas Neue', body: 'Outfit' },
+    palette: { bg: '#0f172a', surface: '#1e293b', text: '#f8fafc', muted: '#94a3b8', primary: '#22c55e', accent: '#eab308' },
+    style: 'bold-energetic',
+    heroStyle: 'high-contrast with diagonal elements and motion blur',
+    effects: ['sharp angles', 'pulse animations', 'bold borders'],
+  },
+  general: {
+    fonts: { display: 'DM Sans', body: 'IBM Plex Sans' },
+    palette: { bg: '#ffffff', surface: '#f9fafb', text: '#111827', muted: '#6b7280', primary: '#2563eb', accent: '#7c3aed' },
+    style: 'balanced-professional',
+    heroStyle: 'clean layout with strong value proposition',
+    effects: ['subtle shadows', 'smooth hovers', 'clean transitions'],
+  },
+};
+
+function getDesignSystem(businessType: string): typeof designSystems.general {
+  const type = businessType.toLowerCase();
+  if (type.includes('restaurant') || type.includes('food') || type.includes('cafe') || type.includes('bar')) return designSystems.restaurant;
+  if (type.includes('retail') || type.includes('shop') || type.includes('store') || type.includes('boutique')) return designSystems.retail;
+  if (type.includes('health') || type.includes('medical') || type.includes('dental') || type.includes('clinic')) return designSystems.healthcare;
+  if (type.includes('law') || type.includes('consulting') || type.includes('finance') || type.includes('accounting')) return designSystems.professional;
+  if (type.includes('design') || type.includes('agency') || type.includes('studio') || type.includes('photo')) return designSystems.creative;
+  if (type.includes('salon') || type.includes('spa') || type.includes('beauty') || type.includes('wellness')) return designSystems.beauty;
+  if (type.includes('gym') || type.includes('fitness') || type.includes('sport') || type.includes('training')) return designSystems.fitness;
+  return designSystems.general;
+}
+
 // Generation logic
 async function runGeneration(jobId: string, request: any) {
   const job = jobs.get(jobId);
@@ -172,7 +250,7 @@ Location: ${request.location || 'Unknown'}
 Scraped Data:
 ${JSON.stringify(scrapedData, null, 2)}
 
-Return JSON:
+Return JSON (infer businessType from one of: restaurant, retail, healthcare, professional, creative, beauty, fitness, general):
 {
   "business": { "name": "", "tagline": "", "descriptionShort": "", "descriptionLong": "", "businessType": "general" },
   "services": [{ "name": "", "description": "", "icon": "emoji" }],
@@ -192,30 +270,72 @@ Return JSON:
 
     const extractedText = extractionResponse.content[0].type === 'text' ? extractionResponse.content[0].text : '';
     const jsonMatch = extractedText.match(/\{[\s\S]*\}/);
-    const extractedData = jsonMatch ? JSON.parse(jsonMatch[0]) : { business: { name: request.businessName }, dataQuality: { completenessScore: 50 } };
+    const extractedData = jsonMatch ? JSON.parse(jsonMatch[0]) : { business: { name: request.businessName, businessType: 'general' }, dataQuality: { completenessScore: 50 } };
 
     job.extractedData = extractedData;
     job.progress = 60;
 
-    // Step 3: Generate Website
+    // Step 3: Generate Website with sophisticated design system
     job.status = 'generating';
     job.progress = 70;
-    job.currentStep = 'Generating website...';
+    job.currentStep = 'Crafting distinctive website...';
 
-    const colors = { primary: '#3b82f6', secondary: '#1d4ed8' };
-    const generatePrompt = `Create a stunning, SEO-optimized single-page website HTML for:
+    const design = getDesignSystem(extractedData.business?.businessType || 'general');
 
+    const generatePrompt = `You are an elite web designer creating a DISTINCTIVE, production-grade single-page website.
+AVOID generic "AI-generated" aesthetics. Create something memorable and intentional.
+
+## BUSINESS DATA
 ${JSON.stringify(extractedData, null, 2)}
 
-Requirements:
-- Use Tailwind CSS CDN
-- Color scheme: primary ${colors.primary}, secondary ${colors.secondary}
-- Include: nav, hero, services, about, testimonials, contact form, footer
-- Mobile responsive
-- JSON-LD structured data
-- Meta tags for SEO
+## DESIGN SYSTEM (MANDATORY)
+Style: ${design.style}
+Typography:
+- Display/Headlines: "${design.fonts.display}" (Google Fonts)
+- Body text: "${design.fonts.body}" (Google Fonts)
+${design.fonts.accent ? `- Accent/Handwritten: "${design.fonts.accent}" (Google Fonts)` : ''}
 
-Return ONLY the complete HTML document.`;
+Color Palette (use CSS variables):
+--color-bg: ${design.palette.bg}
+--color-surface: ${design.palette.surface}
+--color-text: ${design.palette.text}
+--color-muted: ${design.palette.muted}
+--color-primary: ${design.palette.primary}
+--color-accent: ${design.palette.accent}
+
+Hero Style: ${design.heroStyle}
+Visual Effects: ${design.effects.join(', ')}
+
+## TECHNICAL REQUIREMENTS
+1. Use Tailwind CSS CDN with custom config extending the color palette
+2. Load Google Fonts for the specified typography
+3. Mobile-first responsive design
+4. CSS animations: staggered fade-in on scroll, hover micro-interactions
+5. Include JSON-LD LocalBusiness structured data
+6. Complete meta tags (title, description, og:tags, twitter:cards)
+
+## LAYOUT SECTIONS (in order)
+1. **Navigation**: Sticky, minimal, with smooth scroll links. Logo left, links right.
+2. **Hero**: ${design.heroStyle}. Bold headline with the tagline. Clear CTA button.
+3. **Trust Bar**: Rating stars, review count, key differentiators in a subtle row.
+4. **Services/Menu**: Grid or cards showcasing 3-6 key offerings with icons/emojis.
+5. **About**: Split layout - compelling story on one side, key stats/highlights on other.
+6. **Testimonials**: Featured quotes with author attribution. Elegant styling.
+7. **Contact**: Two-column - contact info/hours on left, simple form on right.
+8. **Footer**: Logo, quick links, social icons, copyright.
+
+## CRITICAL DESIGN RULES
+- NO generic blue/purple gradients
+- NO predictable symmetrical layouts - use intentional asymmetry
+- Typography hierarchy: massive headlines (clamp sizes), comfortable body text
+- Generous whitespace - let elements breathe
+- Shadows should be atmospheric, not flat drop-shadows
+- Buttons: distinctive styling that matches the aesthetic (not generic rounded pills)
+- Images: use placeholder divs with background colors (will be replaced later)
+- Micro-interactions on hover states for all interactive elements
+
+## OUTPUT
+Return ONLY the complete HTML document starting with <!DOCTYPE html>. No markdown, no explanations.`;
 
     const generateResponse = await anthropicClient.messages.create({
       model: 'claude-sonnet-4-20250514',
