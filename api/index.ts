@@ -9,6 +9,78 @@ import * as cheerio from 'cheerio';
 
 const app = express();
 
+// Apify client for design inspiration
+const APIFY_TOKEN = process.env.APIFY_TOKEN;
+const APIFY_DRIBBBLE_ACTOR = 'practicaltools/dribbble-popular-shots';
+
+interface DesignInspiration {
+  title: string;
+  imageUrl: string;
+  colors: string[];
+  tags: string[];
+  creator: string;
+}
+
+// Fetch design inspiration from Dribbble via Apify
+async function fetchDesignInspiration(businessType: string): Promise<DesignInspiration[]> {
+  if (!APIFY_TOKEN) return [];
+
+  const searchQueries: Record<string, string> = {
+    restaurant: 'restaurant website landing page',
+    retail: 'ecommerce shop website',
+    healthcare: 'medical clinic website',
+    professional: 'law firm consulting website',
+    creative: 'design agency portfolio',
+    beauty: 'salon spa website',
+    fitness: 'gym fitness website',
+    general: 'small business website',
+  };
+
+  const query = searchQueries[businessType] || searchQueries.general;
+
+  try {
+    // Start the Apify actor run
+    const runResponse = await axios.post(
+      `https://api.apify.com/v2/acts/${APIFY_DRIBBBLE_ACTOR}/runs?token=${APIFY_TOKEN}`,
+      {
+        startUrls: [{ url: `https://dribbble.com/search/${encodeURIComponent(query)}` }],
+        maxItems: 6,
+      },
+      { timeout: 30000 }
+    );
+
+    const runId = runResponse.data.data.id;
+
+    // Wait for completion (poll for up to 60 seconds)
+    let attempts = 0;
+    while (attempts < 12) {
+      await new Promise(r => setTimeout(r, 5000));
+      const statusResponse = await axios.get(
+        `https://api.apify.com/v2/actor-runs/${runId}?token=${APIFY_TOKEN}`
+      );
+      if (statusResponse.data.data.status === 'SUCCEEDED') break;
+      if (statusResponse.data.data.status === 'FAILED') return [];
+      attempts++;
+    }
+
+    // Fetch results
+    const datasetResponse = await axios.get(
+      `https://api.apify.com/v2/actor-runs/${runId}/dataset/items?token=${APIFY_TOKEN}`
+    );
+
+    return datasetResponse.data.slice(0, 6).map((item: any) => ({
+      title: item.title || '',
+      imageUrl: item.imageUrl || item.image || '',
+      colors: item.colors || [],
+      tags: item.tags || [],
+      creator: item.user?.name || item.creator || '',
+    }));
+  } catch (error) {
+    console.error('Apify fetch failed:', error);
+    return [];
+  }
+}
+
 // Middleware
 app.use(cors());
 app.use(helmet({
@@ -36,7 +108,15 @@ const generateRequestSchema = z.object({
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    features: {
+      apifyInspiration: !!APIFY_TOKEN,
+      anthropicAI: !!process.env.ANTHROPIC_API_KEY,
+      vercelDeploy: !!process.env.VERCEL_TOKEN,
+    }
+  });
 });
 
 // Generate endpoint
@@ -273,21 +353,38 @@ Return JSON (infer businessType from one of: restaurant, retail, healthcare, pro
     const extractedData = jsonMatch ? JSON.parse(jsonMatch[0]) : { business: { name: request.businessName, businessType: 'general' }, dataQuality: { completenessScore: 50 } };
 
     job.extractedData = extractedData;
-    job.progress = 60;
+    job.progress = 55;
 
-    // Step 3: Generate Website with sophisticated design system
+    // Step 3: Fetch design inspiration from Dribbble (optional)
+    job.currentStep = 'Gathering design inspiration...';
+    const businessType = extractedData.business?.businessType || 'general';
+    const designInspiration = await fetchDesignInspiration(businessType);
+    job.progress = 65;
+
+    // Step 4: Generate Website with sophisticated design system
     job.status = 'generating';
     job.progress = 70;
     job.currentStep = 'Crafting distinctive website...';
 
-    const design = getDesignSystem(extractedData.business?.businessType || 'general');
+    const design = getDesignSystem(businessType);
+
+    // Build inspiration context if available
+    const inspirationContext = designInspiration.length > 0 ? `
+## DESIGN INSPIRATION (from trending Dribbble shots)
+Study these references for layout ideas, color combinations, and visual treatments:
+${designInspiration.map((d, i) => `${i + 1}. "${d.title}" by ${d.creator}
+   - Tags: ${d.tags.slice(0, 5).join(', ')}
+   - Color palette hints: ${d.colors.slice(0, 4).join(', ') || 'N/A'}`).join('\n')}
+
+Use these as INSPIRATION only - create something original that captures a similar level of craft.
+` : '';
 
     const generatePrompt = `You are an elite web designer creating a DISTINCTIVE, production-grade single-page website.
 AVOID generic "AI-generated" aesthetics. Create something memorable and intentional.
 
 ## BUSINESS DATA
 ${JSON.stringify(extractedData, null, 2)}
-
+${inspirationContext}
 ## DESIGN SYSTEM (MANDATORY)
 Style: ${design.style}
 Typography:
@@ -350,7 +447,7 @@ Return ONLY the complete HTML document starting with <!DOCTYPE html>. No markdow
     job.generatedSite = { html };
     job.progress = 85;
 
-    // Step 4: Deploy to Vercel
+    // Step 5: Deploy to Vercel
     job.status = 'deploying';
     job.progress = 90;
     job.currentStep = 'Deploying to Vercel...';
