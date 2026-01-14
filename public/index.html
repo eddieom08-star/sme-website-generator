@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WebsiteForge - SME Website Generator</title>
+  <title>Forge — AI Website Generator</title>
   <meta name="description" content="Generate professional websites for small businesses using AI">
 
   <script src="https://cdn.tailwindcss.com"></script>
@@ -12,14 +12,23 @@
       theme: {
         extend: {
           colors: {
-            primary: '#6366f1',
-            secondary: '#8b5cf6',
-            accent: '#ec4899',
-            sidebar: '#1e1b4b',
-            'sidebar-hover': '#312e81',
-          },
-          fontFamily: {
-            sans: ['Inter', 'system-ui', 'sans-serif'],
+            forge: {
+              bg: '#0a0a0b',
+              surface: '#141416',
+              elevated: '#1c1c1f',
+              border: '#2a2a2d',
+              muted: '#71717a',
+              text: '#fafafa',
+            },
+            amber: {
+              400: '#fbbf24',
+              500: '#f59e0b',
+              600: '#d97706',
+            },
+            emerald: {
+              400: '#34d399',
+              500: '#10b981',
+            }
           },
         }
       }
@@ -27,220 +36,379 @@
   </script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
   <style>
-    body { font-family: 'Inter', sans-serif; }
+    * { box-sizing: border-box; }
 
-    .gradient-bg {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+    body {
+      font-family: 'DM Sans', system-ui, sans-serif;
+      background: #0a0a0b;
+      color: #fafafa;
+      -webkit-font-smoothing: antialiased;
     }
 
-    .glass {
-      background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(10px);
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+    /* Subtle noise texture overlay */
+    .noise::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      opacity: 0.015;
+      pointer-events: none;
+      z-index: 9999;
     }
 
-    .progress-bar {
-      transition: width 0.5s ease-in-out;
+    /* Sidebar gradient */
+    .sidebar-gradient {
+      background: linear-gradient(180deg, #141416 0%, #0f0f10 100%);
+      border-right: 1px solid rgba(255,255,255,0.04);
     }
 
-    @keyframes pulse-glow {
-      0%, 100% { box-shadow: 0 0 20px rgba(99, 102, 241, 0.4); }
-      50% { box-shadow: 0 0 40px rgba(99, 102, 241, 0.6); }
+    /* Glass card effect */
+    .glass-card {
+      background: rgba(28, 28, 31, 0.6);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.06);
     }
 
-    .processing {
-      animation: pulse-glow 2s infinite;
+    /* Ambient glow effects */
+    .glow-amber {
+      box-shadow: 0 0 60px -15px rgba(251, 191, 36, 0.15);
     }
 
-    .fade-in {
-      animation: fadeIn 0.3s ease-in;
+    .glow-emerald {
+      box-shadow: 0 0 40px -10px rgba(52, 211, 153, 0.2);
     }
 
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
+    /* Input styling */
+    .forge-input {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
+    .forge-input:hover {
+      border-color: rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.04);
+    }
+
+    .forge-input:focus {
+      outline: none;
+      border-color: #f59e0b;
+      background: rgba(255,255,255,0.05);
+      box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+    }
+
+    .forge-input::placeholder {
+      color: #52525b;
+    }
+
+    /* Button styling */
+    .forge-btn-primary {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      box-shadow: 0 4px 14px -3px rgba(245, 158, 11, 0.4),
+                  inset 0 1px 0 rgba(255,255,255,0.1);
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .forge-btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px -3px rgba(245, 158, 11, 0.5),
+                  inset 0 1px 0 rgba(255,255,255,0.1);
+    }
+
+    .forge-btn-primary:active {
+      transform: translateY(0);
+    }
+
+    /* Sidebar items */
     .sidebar-item {
-      transition: all 0.2s ease;
+      transition: all 0.15s ease;
+      border-left: 2px solid transparent;
     }
 
     .sidebar-item:hover {
-      background: rgba(99, 102, 241, 0.2);
+      background: rgba(255,255,255,0.03);
     }
 
     .sidebar-item.active {
-      background: rgba(99, 102, 241, 0.3);
-      border-left: 3px solid #6366f1;
+      background: rgba(245, 158, 11, 0.08);
+      border-left-color: #f59e0b;
     }
 
+    /* Submenu animation */
     .submenu {
       max-height: 0;
       overflow: hidden;
-      transition: max-height 0.3s ease;
+      transition: max-height 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .submenu.open {
-      max-height: 300px;
+      max-height: 280px;
     }
 
     .submenu-item {
-      transition: all 0.2s ease;
+      transition: all 0.15s ease;
     }
 
     .submenu-item:hover {
-      background: rgba(99, 102, 241, 0.15);
+      background: rgba(255,255,255,0.04);
+      color: #fafafa;
     }
 
-    .submenu-item.active {
-      background: rgba(99, 102, 241, 0.25);
-      color: #a5b4fc;
+    /* Progress bar */
+    .progress-track {
+      background: rgba(255,255,255,0.06);
+      overflow: hidden;
     }
 
-    .status-badge {
+    .progress-fill {
+      background: linear-gradient(90deg, #f59e0b 0%, #fbbf24 100%);
+      transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Pulse animation for processing */
+    @keyframes pulse-ring {
+      0% { transform: scale(0.95); opacity: 1; }
+      50% { transform: scale(1.05); opacity: 0.8; }
+      100% { transform: scale(0.95); opacity: 1; }
+    }
+
+    .processing-ring {
+      animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    /* Fade in animation */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .fade-in {
+      animation: fadeUp 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    /* Staggered children */
+    .stagger-children > * {
+      opacity: 0;
+      animation: fadeUp 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+    .stagger-children > *:nth-child(1) { animation-delay: 0.05s; }
+    .stagger-children > *:nth-child(2) { animation-delay: 0.1s; }
+    .stagger-children > *:nth-child(3) { animation-delay: 0.15s; }
+    .stagger-children > *:nth-child(4) { animation-delay: 0.2s; }
+
+    /* Status dot pulse */
+    @keyframes dot-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .status-dot-live {
+      animation: dot-pulse 2s ease-in-out infinite;
+    }
+
+    /* Scrollbar styling */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.1);
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255,255,255,0.15);
+    }
+
+    /* Stats card hover */
+    .stat-card {
+      transition: all 0.2s ease;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(255,255,255,0.1);
+    }
+
+    /* Badge styling */
+    .badge {
       font-size: 0.65rem;
-      padding: 2px 6px;
-      border-radius: 9999px;
+      letter-spacing: 0.025em;
+      text-transform: uppercase;
     }
   </style>
 </head>
-<body class="min-h-screen bg-gray-100">
+<body class="noise min-h-screen">
 
   <div class="flex min-h-screen">
-    <!-- Left Sidebar -->
-    <aside id="sidebar" class="w-64 bg-sidebar text-white flex flex-col fixed h-full z-10">
+    <!-- Sidebar -->
+    <aside id="sidebar" class="w-72 sidebar-gradient flex flex-col fixed h-full z-20">
       <!-- Logo -->
-      <div class="p-4 border-b border-white/10">
-        <div class="flex items-center space-x-3">
-          <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
-            <span class="text-xl">W</span>
+      <div class="p-6 border-b border-white/[0.04]">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/20">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
           </div>
           <div>
-            <h1 class="text-lg font-bold">WebsiteForge</h1>
-            <p class="text-xs text-white/60">SME Generator</p>
+            <h1 class="text-lg font-semibold tracking-tight">Forge</h1>
+            <p class="text-xs text-forge-muted font-mono">v1.0.0</p>
           </div>
         </div>
       </div>
 
       <!-- New Site Button -->
       <div class="p-4">
-        <button id="new-site-sidebar-btn" class="w-full py-2.5 px-4 bg-primary hover:bg-primary/90 text-white font-semibold rounded-lg transition flex items-center justify-center gap-2">
-          <span>+</span> New Website
+        <button id="new-site-sidebar-btn" class="forge-btn-primary w-full py-3 px-4 text-forge-bg font-semibold rounded-xl flex items-center justify-center gap-2 text-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+          New Website
         </button>
       </div>
 
       <!-- Sites List -->
-      <div class="flex-1 overflow-y-auto">
-        <div class="px-4 py-2">
-          <h3 class="text-xs font-semibold text-white/40 uppercase tracking-wider">Your Sites</h3>
+      <div class="flex-1 overflow-y-auto px-3">
+        <div class="px-3 py-3">
+          <span class="text-[10px] font-semibold text-forge-muted uppercase tracking-widest">Your Sites</span>
         </div>
-        <nav id="sites-list" class="space-y-1 px-2">
-          <!-- Sites will be dynamically inserted here -->
-          <div id="no-sites-message" class="px-4 py-8 text-center text-white/40 text-sm">
-            <p>No sites generated yet.</p>
-            <p class="mt-1">Click "New Website" to start!</p>
+        <nav id="sites-list" class="space-y-1">
+          <div id="no-sites-message" class="px-4 py-10 text-center">
+            <div class="w-12 h-12 mx-auto mb-4 rounded-xl bg-white/[0.03] flex items-center justify-center">
+              <svg class="w-6 h-6 text-forge-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+              </svg>
+            </div>
+            <p class="text-sm text-forge-muted">No sites yet</p>
+            <p class="text-xs text-forge-muted/60 mt-1">Create your first website</p>
           </div>
         </nav>
       </div>
 
-      <!-- User Section -->
-      <div class="p-4 border-t border-white/10">
-        <div class="flex items-center gap-3">
-          <div class="w-8 h-8 bg-primary/30 rounded-full flex items-center justify-center">
-            <span class="text-sm">U</span>
+      <!-- Footer -->
+      <div class="p-4 border-t border-white/[0.04]">
+        <div class="flex items-center gap-3 px-2">
+          <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500/20 to-emerald-600/20 flex items-center justify-center">
+            <span class="text-xs font-medium text-emerald-400">AI</span>
           </div>
-          <div class="flex-1">
-            <p class="text-sm font-medium">Dashboard</p>
-            <p class="text-xs text-white/40">v1.0.0</p>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium truncate">Powered by Claude</p>
+            <p class="text-xs text-forge-muted">Anthropic</p>
           </div>
         </div>
       </div>
     </aside>
 
-    <!-- Main Content Area -->
-    <main class="flex-1 ml-64">
+    <!-- Main Content -->
+    <main class="flex-1 ml-72">
       <!-- Top Bar -->
-      <header class="bg-white border-b border-gray-200 px-6 py-4 sticky top-0 z-5">
-        <div class="flex items-center justify-between">
+      <header class="sticky top-0 z-10 bg-forge-bg/80 backdrop-blur-xl border-b border-white/[0.04]">
+        <div class="px-8 py-5 flex items-center justify-between">
           <div>
-            <h2 id="page-title" class="text-xl font-bold text-gray-800">Dashboard</h2>
-            <p id="page-subtitle" class="text-sm text-gray-500">Manage your generated websites</p>
+            <h2 id="page-title" class="text-xl font-semibold tracking-tight">Dashboard</h2>
+            <p id="page-subtitle" class="text-sm text-forge-muted mt-0.5">Manage your generated websites</p>
           </div>
           <div class="flex items-center gap-4">
-            <span id="active-site-badge" class="hidden px-3 py-1 bg-primary/10 text-primary text-sm font-medium rounded-full"></span>
+            <span id="active-site-badge" class="hidden badge px-3 py-1.5 bg-amber-500/10 text-amber-400 rounded-lg font-medium"></span>
           </div>
         </div>
       </header>
 
-      <!-- Content Container -->
-      <div class="p-6">
-        <!-- Dashboard Home (default view) -->
+      <!-- Content -->
+      <div class="p-8">
+        <!-- Dashboard Home -->
         <div id="dashboard-home" class="fade-in">
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-              <div class="flex items-center gap-4">
-                <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <span class="text-2xl">W</span>
-                </div>
+          <!-- Stats Grid -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8 stagger-children">
+            <div class="stat-card glass-card rounded-2xl p-6 cursor-default">
+              <div class="flex items-start justify-between">
                 <div>
-                  <p id="total-sites-count" class="text-2xl font-bold text-gray-800">0</p>
-                  <p class="text-sm text-gray-500">Total Sites</p>
+                  <p class="text-sm text-forge-muted mb-1">Total Sites</p>
+                  <p id="total-sites-count" class="text-3xl font-semibold tracking-tight">0</p>
+                </div>
+                <div class="w-11 h-11 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                  <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                  </svg>
                 </div>
               </div>
             </div>
-            <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-              <div class="flex items-center gap-4">
-                <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                  <span class="text-2xl">L</span>
-                </div>
+
+            <div class="stat-card glass-card rounded-2xl p-6 cursor-default">
+              <div class="flex items-start justify-between">
                 <div>
-                  <p id="live-sites-count" class="text-2xl font-bold text-gray-800">0</p>
-                  <p class="text-sm text-gray-500">Live Sites</p>
+                  <p class="text-sm text-forge-muted mb-1">Live Sites</p>
+                  <p id="live-sites-count" class="text-3xl font-semibold tracking-tight text-emerald-400">0</p>
+                </div>
+                <div class="w-11 h-11 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                  <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                  </svg>
                 </div>
               </div>
             </div>
-            <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-              <div class="flex items-center gap-4">
-                <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <span class="text-2xl">Q</span>
-                </div>
+
+            <div class="stat-card glass-card rounded-2xl p-6 cursor-default">
+              <div class="flex items-start justify-between">
                 <div>
-                  <p id="avg-quality-score" class="text-2xl font-bold text-gray-800">--</p>
-                  <p class="text-sm text-gray-500">Avg Quality</p>
+                  <p class="text-sm text-forge-muted mb-1">Avg Quality</p>
+                  <p id="avg-quality-score" class="text-3xl font-semibold tracking-tight">—</p>
+                </div>
+                <div class="w-11 h-11 rounded-xl bg-violet-500/10 flex items-center justify-center">
+                  <svg class="w-5 h-5 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                  </svg>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Quick Actions -->
-          <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-            <h3 class="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h3>
+          <div class="glass-card rounded-2xl p-6">
+            <h3 class="text-base font-semibold mb-5">Quick Actions</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <button id="quick-new-site" class="p-4 border-2 border-dashed border-gray-200 rounded-xl hover:border-primary hover:bg-primary/5 transition text-left group">
-                <span class="text-2xl mb-2 block">+</span>
-                <p class="font-semibold text-gray-800 group-hover:text-primary">Generate New Site</p>
-                <p class="text-sm text-gray-500">Create a website for a new business</p>
+              <button id="quick-new-site" class="group p-5 rounded-xl border border-dashed border-white/10 hover:border-amber-500/40 hover:bg-amber-500/[0.03] transition-all duration-200 text-left">
+                <div class="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
+                  <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                  </svg>
+                </div>
+                <p class="font-medium text-forge-text group-hover:text-amber-400 transition-colors">Generate New Site</p>
+                <p class="text-sm text-forge-muted mt-1">Create a website for a new business</p>
               </button>
             </div>
           </div>
         </div>
 
-        <!-- Generator Form Section -->
+        <!-- Generator Form -->
         <div id="generator-section" class="hidden fade-in">
           <div class="max-w-2xl mx-auto">
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+            <div class="glass-card rounded-2xl p-8 glow-amber">
               <div class="text-center mb-8">
-                <h2 class="text-2xl font-bold text-gray-800 mb-2">Generate a Website</h2>
-                <p class="text-gray-600">Enter business details and we'll create a stunning website</p>
+                <div class="w-14 h-14 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/25">
+                  <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                  </svg>
+                </div>
+                <h2 class="text-2xl font-semibold tracking-tight">Generate a Website</h2>
+                <p class="text-forge-muted mt-2">Enter business details and we'll create a stunning website</p>
               </div>
 
               <form id="generate-form" class="space-y-5">
-                <!-- Business Name -->
                 <div>
-                  <label class="block text-sm font-semibold text-gray-700 mb-2">
-                    Business Name <span class="text-red-500">*</span>
+                  <label class="block text-sm font-medium text-forge-muted mb-2">
+                    Business Name <span class="text-amber-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -248,98 +416,91 @@
                     name="businessName"
                     required
                     placeholder="e.g. Thompson's Heating & Plumbing"
-                    class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/20 outline-none transition"
+                    class="forge-input w-full px-4 py-3.5 rounded-xl text-forge-text"
                   >
                 </div>
 
-                <!-- Location -->
                 <div>
-                  <label class="block text-sm font-semibold text-gray-700 mb-2">Location</label>
+                  <label class="block text-sm font-medium text-forge-muted mb-2">Location</label>
                   <input
                     type="text"
                     id="location"
                     name="location"
                     placeholder="e.g. Manchester, UK"
-                    class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/20 outline-none transition"
+                    class="forge-input w-full px-4 py-3.5 rounded-xl text-forge-text"
                   >
                 </div>
 
-                <!-- Google Maps Link -->
                 <div>
-                  <label class="block text-sm font-semibold text-gray-700 mb-2">
-                    Google Maps / Business Profile Link
-                  </label>
+                  <label class="block text-sm font-medium text-forge-muted mb-2">Google Maps Link</label>
                   <input
                     type="url"
                     id="googleMapsUrl"
                     name="googleMapsUrl"
                     placeholder="https://maps.app.goo.gl/..."
-                    class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/20 outline-none transition"
+                    class="forge-input w-full px-4 py-3.5 rounded-xl text-forge-text font-mono text-sm"
                   >
-                  <p class="text-xs text-gray-500 mt-1">Paste share link from Google Maps</p>
+                  <p class="text-xs text-forge-muted/60 mt-2">Paste share link from Google Maps</p>
                 </div>
 
-                <!-- Social Links Grid -->
                 <div class="grid md:grid-cols-2 gap-4">
                   <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">Website URL</label>
+                    <label class="block text-sm font-medium text-forge-muted mb-2">Website URL</label>
                     <input
                       type="url"
                       id="websiteUrl"
                       name="websiteUrl"
                       placeholder="https://example.com"
-                      class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/20 outline-none transition"
+                      class="forge-input w-full px-4 py-3.5 rounded-xl text-forge-text font-mono text-sm"
                     >
                   </div>
                   <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">Facebook Page</label>
+                    <label class="block text-sm font-medium text-forge-muted mb-2">Facebook</label>
                     <input
                       type="url"
                       id="facebookUrl"
                       name="facebookUrl"
-                      placeholder="https://facebook.com/business"
-                      class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/20 outline-none transition"
+                      placeholder="https://facebook.com/..."
+                      class="forge-input w-full px-4 py-3.5 rounded-xl text-forge-text font-mono text-sm"
                     >
                   </div>
                   <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">Instagram</label>
+                    <label class="block text-sm font-medium text-forge-muted mb-2">Instagram</label>
                     <input
                       type="text"
                       id="instagramUrl"
                       name="instagramUrl"
-                      placeholder="@username or URL"
-                      class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/20 outline-none transition"
+                      placeholder="@username"
+                      class="forge-input w-full px-4 py-3.5 rounded-xl text-forge-text"
                     >
                   </div>
                   <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">LinkedIn</label>
+                    <label class="block text-sm font-medium text-forge-muted mb-2">LinkedIn</label>
                     <input
                       type="url"
                       id="linkedinUrl"
                       name="linkedinUrl"
-                      placeholder="https://linkedin.com/company/..."
-                      class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/20 outline-none transition"
+                      placeholder="https://linkedin.com/..."
+                      class="forge-input w-full px-4 py-3.5 rounded-xl text-forge-text font-mono text-sm"
                     >
                   </div>
                 </div>
 
-                <!-- Additional Info -->
                 <div>
-                  <label class="block text-sm font-semibold text-gray-700 mb-2">Additional Information</label>
+                  <label class="block text-sm font-medium text-forge-muted mb-2">Additional Information</label>
                   <textarea
                     id="additionalInfo"
                     name="additionalInfo"
                     rows="3"
-                    placeholder="Any specific services, unique selling points, or style preferences..."
-                    class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/20 outline-none transition resize-none"
+                    placeholder="Services, unique selling points, style preferences..."
+                    class="forge-input w-full px-4 py-3.5 rounded-xl text-forge-text resize-none"
                   ></textarea>
                 </div>
 
-                <!-- Submit Button -->
                 <button
                   type="submit"
                   id="submit-btn"
-                  class="w-full py-4 px-8 bg-gradient-to-r from-primary to-secondary text-white font-bold text-lg rounded-xl hover:opacity-90 transition transform hover:scale-[1.01] shadow-lg"
+                  class="forge-btn-primary w-full py-4 text-forge-bg font-semibold rounded-xl text-base mt-2"
                 >
                   Generate Website
                 </button>
@@ -350,88 +511,104 @@
 
         <!-- Progress Section -->
         <div id="progress-section" class="hidden fade-in">
-          <div class="max-w-xl mx-auto">
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
-              <div class="text-center">
-                <div id="progress-icon" class="w-20 h-20 mx-auto mb-6 bg-primary/10 rounded-full flex items-center justify-center processing">
-                  <span class="text-4xl" id="status-emoji">Z</span>
-                </div>
-
-                <h2 id="progress-title" class="text-xl font-bold text-gray-800 mb-2">Generating your website...</h2>
-                <p id="progress-step" class="text-gray-600 mb-8">Starting up...</p>
-
-                <div class="w-full bg-gray-200 rounded-full h-3 mb-4 overflow-hidden">
-                  <div id="progress-bar" class="progress-bar bg-gradient-to-r from-primary to-secondary h-3 rounded-full" style="width: 0%"></div>
-                </div>
-                <p id="progress-percent" class="text-sm text-gray-500">0%</p>
+          <div class="max-w-lg mx-auto">
+            <div class="glass-card rounded-2xl p-10 text-center glow-amber">
+              <div id="progress-icon" class="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-amber-500/20 to-amber-600/20 flex items-center justify-center processing-ring">
+                <span class="text-3xl font-mono font-medium text-amber-400" id="status-emoji">⚡</span>
               </div>
+
+              <h2 id="progress-title" class="text-xl font-semibold mb-2">Generating your website...</h2>
+              <p id="progress-step" class="text-forge-muted mb-8">Starting up...</p>
+
+              <div class="progress-track w-full h-1.5 rounded-full mb-4">
+                <div id="progress-bar" class="progress-fill h-full rounded-full" style="width: 0%"></div>
+              </div>
+              <p id="progress-percent" class="text-sm font-mono text-forge-muted">0%</p>
             </div>
           </div>
         </div>
 
-        <!-- Site Management Sections -->
+        <!-- Site Overview -->
         <div id="site-overview" class="hidden fade-in">
-          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 stagger-children">
             <div class="lg:col-span-2 space-y-6">
-              <!-- Site Info Card -->
-              <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-                <div class="flex items-start justify-between mb-4">
+              <div class="glass-card rounded-2xl p-6">
+                <div class="flex items-start justify-between mb-5">
                   <div>
-                    <h3 id="site-name-display" class="text-xl font-bold text-gray-800"></h3>
-                    <p id="site-location-display" class="text-gray-500"></p>
+                    <h3 id="site-name-display" class="text-xl font-semibold"></h3>
+                    <p id="site-location-display" class="text-forge-muted text-sm mt-1"></p>
                   </div>
-                  <span id="site-status-badge" class="status-badge bg-green-100 text-green-700">Live</span>
+                  <span id="site-status-badge" class="badge px-3 py-1.5 bg-emerald-500/10 text-emerald-400 rounded-lg font-medium flex items-center gap-1.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 status-dot-live"></span>
+                    Live
+                  </span>
                 </div>
                 <div class="flex gap-3">
-                  <a id="site-live-link" href="#" target="_blank" class="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition">
-                    View Live Site
+                  <a id="site-live-link" href="#" target="_blank" class="forge-btn-primary px-5 py-2.5 text-forge-bg rounded-lg text-sm font-medium inline-flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                    </svg>
+                    View Live
                   </a>
-                  <a id="site-preview-link" href="#" target="_blank" class="px-4 py-2 border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition">
-                    Local Preview
+                  <a id="site-preview-link" href="#" target="_blank" class="px-5 py-2.5 border border-white/10 hover:border-white/20 rounded-lg text-sm font-medium transition-colors">
+                    Preview
                   </a>
                 </div>
               </div>
 
-              <!-- Quick Stats -->
               <div class="grid grid-cols-3 gap-4">
-                <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 text-center">
-                  <p id="site-quality" class="text-2xl font-bold text-primary">--</p>
-                  <p class="text-xs text-gray-500">Quality Score</p>
+                <div class="glass-card rounded-xl p-5 text-center">
+                  <p id="site-quality" class="text-2xl font-semibold text-amber-400">—</p>
+                  <p class="text-xs text-forge-muted mt-1">Quality</p>
                 </div>
-                <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 text-center">
-                  <p class="text-2xl font-bold text-green-600">--</p>
-                  <p class="text-xs text-gray-500">Visitors</p>
+                <div class="glass-card rounded-xl p-5 text-center">
+                  <p class="text-2xl font-semibold text-emerald-400">—</p>
+                  <p class="text-xs text-forge-muted mt-1">Visitors</p>
                 </div>
-                <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 text-center">
-                  <p class="text-2xl font-bold text-blue-600">--</p>
-                  <p class="text-xs text-gray-500">Leads</p>
+                <div class="glass-card rounded-xl p-5 text-center">
+                  <p class="text-2xl font-semibold text-violet-400">—</p>
+                  <p class="text-xs text-forge-muted mt-1">Leads</p>
                 </div>
               </div>
             </div>
 
-            <!-- Right Column - Quick Links -->
             <div class="space-y-4">
-              <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                <h4 class="font-semibold text-gray-800 mb-3">Management</h4>
-                <div class="space-y-2">
-                  <button data-section="payments" class="submenu-nav w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 transition text-sm text-gray-700">
+              <div class="glass-card rounded-xl p-5">
+                <h4 class="text-sm font-semibold text-forge-muted mb-4">Management</h4>
+                <div class="space-y-1">
+                  <button data-section="payments" class="submenu-nav w-full text-left px-3 py-2.5 rounded-lg text-sm text-forge-muted hover:text-forge-text transition-colors flex items-center gap-3">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                    </svg>
                     Payments
                   </button>
-                  <button data-section="leads" class="submenu-nav w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 transition text-sm text-gray-700">
+                  <button data-section="leads" class="submenu-nav w-full text-left px-3 py-2.5 rounded-lg text-sm text-forge-muted hover:text-forge-text transition-colors flex items-center gap-3">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                    </svg>
                     Leads
                   </button>
-                  <button data-section="ai-receptionist" class="submenu-nav w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 transition text-sm text-gray-700">
+                  <button data-section="ai-receptionist" class="submenu-nav w-full text-left px-3 py-2.5 rounded-lg text-sm text-forge-muted hover:text-forge-text transition-colors flex items-center gap-3">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+                    </svg>
                     AI Receptionist
                   </button>
                 </div>
               </div>
-              <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                <h4 class="font-semibold text-gray-800 mb-3">Environments</h4>
-                <div class="space-y-2">
-                  <button data-section="staging" class="submenu-nav w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 transition text-sm text-gray-700">
+              <div class="glass-card rounded-xl p-5">
+                <h4 class="text-sm font-semibold text-forge-muted mb-4">Environments</h4>
+                <div class="space-y-1">
+                  <button data-section="staging" class="submenu-nav w-full text-left px-3 py-2.5 rounded-lg text-sm text-forge-muted hover:text-forge-text transition-colors flex items-center gap-3">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
+                    </svg>
                     Staging
                   </button>
-                  <button data-section="production" class="submenu-nav w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 transition text-sm text-gray-700">
+                  <button data-section="production" class="submenu-nav w-full text-left px-3 py-2.5 rounded-lg text-sm text-forge-muted hover:text-forge-text transition-colors flex items-center gap-3">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
+                    </svg>
                     Production
                   </button>
                 </div>
@@ -442,51 +619,63 @@
 
         <!-- Payments Section -->
         <div id="payments-section" class="hidden fade-in">
-          <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-            <h3 class="text-lg font-bold text-gray-800 mb-4">Payments</h3>
-            <div class="text-center py-12 text-gray-500">
-              <span class="text-4xl mb-4 block">$</span>
+          <div class="glass-card rounded-2xl p-8">
+            <h3 class="text-lg font-semibold mb-6">Payments</h3>
+            <div class="text-center py-16">
+              <div class="w-16 h-16 mx-auto mb-5 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
+                <svg class="w-8 h-8 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                </svg>
+              </div>
               <p class="font-medium">Payment integration coming soon</p>
-              <p class="text-sm">Accept payments directly through your website</p>
+              <p class="text-sm text-forge-muted mt-2">Accept payments directly through your website</p>
             </div>
           </div>
         </div>
 
         <!-- Leads Section -->
         <div id="leads-section" class="hidden fade-in">
-          <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-            <h3 class="text-lg font-bold text-gray-800 mb-4">Leads</h3>
-            <div class="text-center py-12 text-gray-500">
-              <span class="text-4xl mb-4 block">U</span>
+          <div class="glass-card rounded-2xl p-8">
+            <h3 class="text-lg font-semibold mb-6">Leads</h3>
+            <div class="text-center py-16">
+              <div class="w-16 h-16 mx-auto mb-5 rounded-2xl bg-violet-500/10 flex items-center justify-center">
+                <svg class="w-8 h-8 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+              </div>
               <p class="font-medium">No leads captured yet</p>
-              <p class="text-sm">Form submissions will appear here</p>
+              <p class="text-sm text-forge-muted mt-2">Form submissions will appear here</p>
             </div>
           </div>
         </div>
 
         <!-- AI Receptionist Section -->
         <div id="ai-receptionist-section" class="hidden fade-in">
-          <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-            <h3 class="text-lg font-bold text-gray-800 mb-4">AI Receptionist</h3>
-            <div class="text-center py-12 text-gray-500">
-              <span class="text-4xl mb-4 block">AI</span>
+          <div class="glass-card rounded-2xl p-8">
+            <h3 class="text-lg font-semibold mb-6">AI Receptionist</h3>
+            <div class="text-center py-16">
+              <div class="w-16 h-16 mx-auto mb-5 rounded-2xl bg-amber-500/10 flex items-center justify-center">
+                <svg class="w-8 h-8 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+                </svg>
+              </div>
               <p class="font-medium">AI Receptionist coming soon</p>
-              <p class="text-sm">24/7 automated customer support for your business</p>
+              <p class="text-sm text-forge-muted mt-2">24/7 automated customer support</p>
             </div>
           </div>
         </div>
 
         <!-- Staging Section -->
         <div id="staging-section" class="hidden fade-in">
-          <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-            <h3 class="text-lg font-bold text-gray-800 mb-4">Staging Environment</h3>
-            <div class="space-y-4">
-              <p class="text-gray-600">Test changes before going live</p>
-              <div class="bg-gray-50 rounded-lg p-4">
-                <p class="text-sm text-gray-500 mb-2">Staging URL</p>
-                <p id="staging-url" class="font-mono text-sm text-primary">--</p>
+          <div class="glass-card rounded-2xl p-8">
+            <h3 class="text-lg font-semibold mb-6">Staging Environment</h3>
+            <div class="space-y-5">
+              <p class="text-forge-muted">Test changes before going live</p>
+              <div class="bg-white/[0.02] rounded-xl p-5 border border-white/[0.04]">
+                <p class="text-xs text-forge-muted mb-2 uppercase tracking-wider">Staging URL</p>
+                <p id="staging-url" class="font-mono text-sm text-amber-400">—</p>
               </div>
-              <button class="px-4 py-2 bg-yellow-500 text-white rounded-lg text-sm font-medium hover:bg-yellow-600 transition">
+              <button class="px-5 py-2.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded-lg text-sm font-medium transition-colors">
                 Deploy to Staging
               </button>
             </div>
@@ -495,19 +684,19 @@
 
         <!-- Production Section -->
         <div id="production-section" class="hidden fade-in">
-          <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-            <h3 class="text-lg font-bold text-gray-800 mb-4">Production Environment</h3>
-            <div class="space-y-4">
-              <p class="text-gray-600">Your live website</p>
-              <div class="bg-gray-50 rounded-lg p-4">
-                <p class="text-sm text-gray-500 mb-2">Production URL</p>
-                <p id="production-url" class="font-mono text-sm text-primary">--</p>
+          <div class="glass-card rounded-2xl p-8">
+            <h3 class="text-lg font-semibold mb-6">Production Environment</h3>
+            <div class="space-y-5">
+              <p class="text-forge-muted">Your live website</p>
+              <div class="bg-white/[0.02] rounded-xl p-5 border border-white/[0.04]">
+                <p class="text-xs text-forge-muted mb-2 uppercase tracking-wider">Production URL</p>
+                <p id="production-url" class="font-mono text-sm text-emerald-400">—</p>
               </div>
               <div class="flex gap-3">
-                <button class="px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600 transition">
+                <button class="px-5 py-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-lg text-sm font-medium transition-colors">
                   Promote from Staging
                 </button>
-                <button class="px-4 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 transition">
+                <button class="px-5 py-2.5 border border-red-500/20 hover:bg-red-500/10 text-red-400 rounded-lg text-sm font-medium transition-colors">
                   Rollback
                 </button>
               </div>
@@ -517,14 +706,16 @@
 
         <!-- Error Section -->
         <div id="error-section" class="hidden fade-in">
-          <div class="max-w-xl mx-auto">
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center">
-              <div class="w-20 h-20 mx-auto mb-6 bg-red-100 rounded-full flex items-center justify-center">
-                <span class="text-4xl">!</span>
+          <div class="max-w-lg mx-auto">
+            <div class="glass-card rounded-2xl p-10 text-center">
+              <div class="w-16 h-16 mx-auto mb-5 rounded-2xl bg-red-500/10 flex items-center justify-center">
+                <svg class="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
               </div>
-              <h2 class="text-xl font-bold text-gray-800 mb-2">Generation Failed</h2>
-              <p id="error-message" class="text-gray-600 mb-6">Something went wrong. Please try again.</p>
-              <button id="retry-btn" class="px-6 py-3 bg-primary text-white font-semibold rounded-xl hover:bg-primary/90 transition">
+              <h2 class="text-xl font-semibold mb-2">Generation Failed</h2>
+              <p id="error-message" class="text-forge-muted mb-6">Something went wrong. Please try again.</p>
+              <button id="retry-btn" class="forge-btn-primary px-8 py-3 text-forge-bg rounded-xl font-medium">
                 Try Again
               </button>
             </div>
@@ -537,21 +728,18 @@
   <script>
     const API_BASE = '/api';
 
-    // State
     let sites = JSON.parse(localStorage.getItem('websiteforge_sites') || '[]');
     let currentJobId = null;
     let pollInterval = null;
     let activeSiteId = null;
     let activeSection = 'dashboard';
 
-    // DOM Elements
     const sitesList = document.getElementById('sites-list');
     const noSitesMessage = document.getElementById('no-sites-message');
     const pageTitle = document.getElementById('page-title');
     const pageSubtitle = document.getElementById('page-subtitle');
     const activeSiteBadge = document.getElementById('active-site-badge');
 
-    // Sections
     const sections = {
       'dashboard-home': document.getElementById('dashboard-home'),
       'generator': document.getElementById('generator-section'),
@@ -565,22 +753,17 @@
       'error': document.getElementById('error-section'),
     };
 
-    // Initialize
     async function init() {
-      // Try to sync with database first
       await syncWithDatabase();
-
       renderSitesList();
       updateDashboardStats();
       showSection('dashboard-home');
 
-      // Event listeners
       document.getElementById('new-site-sidebar-btn').addEventListener('click', showGenerator);
       document.getElementById('quick-new-site').addEventListener('click', showGenerator);
       document.getElementById('generate-form').addEventListener('submit', handleGenerate);
       document.getElementById('retry-btn').addEventListener('click', showGenerator);
 
-      // Submenu navigation
       document.querySelectorAll('.submenu-nav').forEach(btn => {
         btn.addEventListener('click', () => {
           const section = btn.dataset.section;
@@ -590,45 +773,25 @@
       });
     }
 
-    // Sync sites from database
     async function syncWithDatabase() {
       try {
         const response = await fetch(`${API_BASE}/sites`);
         if (response.ok) {
           const data = await response.json();
           if (data.sites && data.sites.length > 0) {
-            // Merge database sites with local sites
             const dbSites = data.sites.map(s => ({
-              id: s.id,
-              jobId: s.jobId,
-              name: s.name,
-              location: s.location,
-              url: s.url,
-              deployed: s.deployed,
-              qualityScore: s.qualityScore,
-              createdAt: s.createdAt,
+              id: s.id, jobId: s.jobId, name: s.name, location: s.location,
+              url: s.url, deployed: s.deployed, qualityScore: s.qualityScore, createdAt: s.createdAt,
             }));
-
-            // Merge: keep local sites not in DB, add DB sites
-            const localJobIds = new Set(sites.map(s => s.jobId));
             const dbJobIds = new Set(dbSites.map(s => s.jobId));
-
-            const merged = [
-              ...dbSites,
-              ...sites.filter(s => !dbJobIds.has(s.jobId)),
-            ];
-
+            const merged = [...dbSites, ...sites.filter(s => !dbJobIds.has(s.jobId))];
             sites = merged.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
             localStorage.setItem('websiteforge_sites', JSON.stringify(sites));
-            console.log('Synced with database:', sites.length, 'sites');
           }
         }
-      } catch (err) {
-        console.log('Database sync skipped (offline or no DB)');
-      }
+      } catch (err) { console.log('Database sync skipped'); }
     }
 
-    // Render sites list in sidebar
     function renderSitesList() {
       const existingSiteItems = sitesList.querySelectorAll('.site-item');
       existingSiteItems.forEach(item => item.remove());
@@ -645,39 +808,37 @@
         siteEl.className = 'site-item';
         siteEl.innerHTML = `
           <div class="sidebar-item rounded-lg cursor-pointer ${activeSiteId === site.id ? 'active' : ''}" data-site-id="${site.id}">
-            <div class="px-3 py-2.5 flex items-center justify-between">
-              <div class="flex items-center gap-2 min-w-0">
-                <div class="w-8 h-8 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <span class="text-xs text-white">${site.name.charAt(0).toUpperCase()}</span>
+            <div class="px-3 py-3 flex items-center justify-between">
+              <div class="flex items-center gap-3 min-w-0">
+                <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-500/20 to-amber-600/20 flex items-center justify-center flex-shrink-0">
+                  <span class="text-xs font-semibold text-amber-400">${site.name.charAt(0).toUpperCase()}</span>
                 </div>
                 <div class="truncate">
                   <p class="text-sm font-medium truncate">${site.name}</p>
-                  <p class="text-xs text-white/40">${site.location || 'No location'}</p>
+                  <p class="text-xs text-forge-muted truncate">${site.location || 'No location'}</p>
                 </div>
               </div>
-              <span class="w-2 h-2 rounded-full ${site.deployed ? 'bg-green-400' : 'bg-yellow-400'} flex-shrink-0"></span>
+              <span class="w-2 h-2 rounded-full flex-shrink-0 ${site.deployed ? 'bg-emerald-400 status-dot-live' : 'bg-amber-400'}"></span>
             </div>
             <div class="submenu ${activeSiteId === site.id ? 'open' : ''}" id="submenu-${site.id}">
-              <div class="pl-12 pr-3 pb-2 space-y-1">
-                <button class="submenu-item w-full text-left px-3 py-1.5 rounded text-xs text-white/70" data-site="${site.id}" data-section="overview">Overview</button>
-                <button class="submenu-item w-full text-left px-3 py-1.5 rounded text-xs text-white/70" data-site="${site.id}" data-section="payments">Payments</button>
-                <button class="submenu-item w-full text-left px-3 py-1.5 rounded text-xs text-white/70" data-site="${site.id}" data-section="leads">Leads</button>
-                <button class="submenu-item w-full text-left px-3 py-1.5 rounded text-xs text-white/70" data-site="${site.id}" data-section="ai-receptionist">AI Receptionist</button>
-                <button class="submenu-item w-full text-left px-3 py-1.5 rounded text-xs text-white/70" data-site="${site.id}" data-section="staging">Staging</button>
-                <button class="submenu-item w-full text-left px-3 py-1.5 rounded text-xs text-white/70" data-site="${site.id}" data-section="production">Production</button>
+              <div class="pl-14 pr-3 pb-3 space-y-0.5">
+                <button class="submenu-item w-full text-left px-3 py-2 rounded-lg text-xs text-forge-muted" data-site="${site.id}" data-section="overview">Overview</button>
+                <button class="submenu-item w-full text-left px-3 py-2 rounded-lg text-xs text-forge-muted" data-site="${site.id}" data-section="payments">Payments</button>
+                <button class="submenu-item w-full text-left px-3 py-2 rounded-lg text-xs text-forge-muted" data-site="${site.id}" data-section="leads">Leads</button>
+                <button class="submenu-item w-full text-left px-3 py-2 rounded-lg text-xs text-forge-muted" data-site="${site.id}" data-section="ai-receptionist">AI Receptionist</button>
+                <button class="submenu-item w-full text-left px-3 py-2 rounded-lg text-xs text-forge-muted" data-site="${site.id}" data-section="staging">Staging</button>
+                <button class="submenu-item w-full text-left px-3 py-2 rounded-lg text-xs text-forge-muted" data-site="${site.id}" data-section="production">Production</button>
               </div>
             </div>
           </div>
         `;
 
-        // Site click handler
         const sidebarItem = siteEl.querySelector('.sidebar-item');
         sidebarItem.addEventListener('click', (e) => {
           if (e.target.classList.contains('submenu-item')) return;
           toggleSite(site.id);
         });
 
-        // Submenu item handlers
         siteEl.querySelectorAll('.submenu-item').forEach(btn => {
           btn.addEventListener('click', () => {
             activeSiteId = btn.dataset.site;
@@ -689,7 +850,6 @@
       });
     }
 
-    // Toggle site expansion
     function toggleSite(siteId) {
       if (activeSiteId === siteId) {
         activeSiteId = null;
@@ -702,7 +862,6 @@
       renderSitesList();
     }
 
-    // Show site section
     function showSiteSection(siteId, section) {
       const site = sites.find(s => s.id === siteId);
       if (!site) return;
@@ -714,26 +873,26 @@
       if (section === 'overview') {
         document.getElementById('site-name-display').textContent = site.name;
         document.getElementById('site-location-display').textContent = site.location || '';
-        document.getElementById('site-quality').textContent = site.qualityScore || '--';
+        document.getElementById('site-quality').textContent = site.qualityScore || '—';
         document.getElementById('site-live-link').href = site.url || '#';
         document.getElementById('site-preview-link').href = `${API_BASE}/jobs/${site.jobId}/preview`;
 
         const statusBadge = document.getElementById('site-status-badge');
         if (site.deployed) {
-          statusBadge.className = 'status-badge bg-green-100 text-green-700';
-          statusBadge.textContent = 'Live';
+          statusBadge.className = 'badge px-3 py-1.5 bg-emerald-500/10 text-emerald-400 rounded-lg font-medium flex items-center gap-1.5';
+          statusBadge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 status-dot-live"></span>Live';
         } else {
-          statusBadge.className = 'status-badge bg-yellow-100 text-yellow-700';
-          statusBadge.textContent = 'Preview Only';
+          statusBadge.className = 'badge px-3 py-1.5 bg-amber-500/10 text-amber-400 rounded-lg font-medium flex items-center gap-1.5';
+          statusBadge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>Preview';
         }
       }
 
       if (section === 'staging') {
-        document.getElementById('staging-url').textContent = site.url ? site.url.replace('.vercel.app', '-staging.vercel.app') : '--';
+        document.getElementById('staging-url').textContent = site.url ? site.url.replace('.vercel.app', '-staging.vercel.app') : '—';
       }
 
       if (section === 'production') {
-        document.getElementById('production-url').textContent = site.url || '--';
+        document.getElementById('production-url').textContent = site.url || '—';
       }
 
       showSection(section);
@@ -741,31 +900,27 @@
       renderSitesList();
     }
 
-    // Show section helper
     function showSection(section) {
       Object.values(sections).forEach(s => s.classList.add('hidden'));
-
       const sectionEl = sections[section];
       if (sectionEl) {
         sectionEl.classList.remove('hidden');
         sectionEl.classList.add('fade-in');
       }
-
       activeSection = section;
     }
 
-    // Update page header
     function updatePageHeader(section, siteName = null) {
       const titles = {
         'dashboard': { title: 'Dashboard', subtitle: 'Manage your generated websites' },
         'dashboard-home': { title: 'Dashboard', subtitle: 'Manage your generated websites' },
         'generator': { title: 'New Website', subtitle: 'Generate a professional website' },
         'overview': { title: siteName || 'Site Overview', subtitle: 'Site management and analytics' },
-        'payments': { title: 'Payments', subtitle: `${siteName || 'Site'} - Payment settings` },
-        'leads': { title: 'Leads', subtitle: `${siteName || 'Site'} - Lead management` },
-        'ai-receptionist': { title: 'AI Receptionist', subtitle: `${siteName || 'Site'} - Automated support` },
-        'staging': { title: 'Staging', subtitle: `${siteName || 'Site'} - Test environment` },
-        'production': { title: 'Production', subtitle: `${siteName || 'Site'} - Live environment` },
+        'payments': { title: 'Payments', subtitle: `${siteName || 'Site'} — Payment settings` },
+        'leads': { title: 'Leads', subtitle: `${siteName || 'Site'} — Lead management` },
+        'ai-receptionist': { title: 'AI Receptionist', subtitle: `${siteName || 'Site'} — Automated support` },
+        'staging': { title: 'Staging', subtitle: `${siteName || 'Site'} — Test environment` },
+        'production': { title: 'Production', subtitle: `${siteName || 'Site'} — Live environment` },
       };
 
       const header = titles[section] || titles['dashboard'];
@@ -777,34 +932,29 @@
       }
     }
 
-    // Update dashboard stats
     function updateDashboardStats() {
       document.getElementById('total-sites-count').textContent = sites.length;
       document.getElementById('live-sites-count').textContent = sites.filter(s => s.deployed).length;
-
-      const avgQuality = sites.length > 0
-        ? Math.round(sites.reduce((sum, s) => sum + (s.qualityScore || 0), 0) / sites.length)
-        : '--';
+      const avgQuality = sites.length > 0 ? Math.round(sites.reduce((sum, s) => sum + (s.qualityScore || 0), 0) / sites.length) : '—';
       document.getElementById('avg-quality-score').textContent = avgQuality;
     }
 
-    // Show generator
     function showGenerator() {
       activeSiteId = null;
       activeSiteBadge.classList.add('hidden');
+      document.getElementById('generate-form').reset();
       showSection('generator');
       updatePageHeader('generator');
       renderSitesList();
     }
 
-    // Update progress UI
     function updateProgress(status) {
       document.getElementById('progress-bar').style.width = `${status.progress}%`;
       document.getElementById('progress-percent').textContent = `${status.progress}%`;
       document.getElementById('progress-step').textContent = status.currentStep || 'Processing...';
 
-      const emojis = { 'scraping': 'S', 'processing': 'P', 'generating': 'G', 'deploying': 'D' };
-      document.getElementById('status-emoji').textContent = emojis[status.status] || 'Z';
+      const emojis = { 'scraping': '🔍', 'processing': '🧠', 'generating': '✨', 'deploying': '🚀' };
+      document.getElementById('status-emoji').textContent = emojis[status.status] || '⚡';
 
       const titles = {
         'scraping': 'Gathering business data...',
@@ -815,47 +965,32 @@
       document.getElementById('progress-title').textContent = titles[status.status] || 'Generating your website...';
     }
 
-    // Poll job status
     async function pollJobStatus(jobId, businessName, location) {
       try {
         const response = await fetch(`${API_BASE}/jobs/${jobId}`);
         const status = await response.json();
-
         updateProgress(status);
 
         if (status.status === 'complete' || status.status === 'failed') {
           clearInterval(pollInterval);
-
           const deployed = status.status === 'complete' && status.result?.siteUrl;
 
-          // Save site
           const newSite = {
-            id: jobId,
-            jobId: jobId,
-            name: businessName,
-            location: location,
+            id: jobId, jobId: jobId, name: businessName, location: location,
             url: status.result?.siteUrl || status.result?.previewUrl,
-            deployed: deployed,
-            qualityScore: status.result?.qualityScore || 0,
+            deployed: deployed, qualityScore: status.result?.qualityScore || 0,
             createdAt: new Date().toISOString(),
           };
 
           sites.unshift(newSite);
           localStorage.setItem('websiteforge_sites', JSON.stringify(sites));
-
           renderSitesList();
           updateDashboardStats();
-
-          // Show site overview
           showSiteSection(jobId, 'overview');
         }
-
-      } catch (err) {
-        console.error('Poll error:', err);
-      }
+      } catch (err) { console.error('Poll error:', err); }
     }
 
-    // Handle form submission
     async function handleGenerate(e) {
       e.preventDefault();
 
@@ -890,7 +1025,6 @@
       }
     }
 
-    // Initialize app
     init();
   </script>
 </body>
