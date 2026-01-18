@@ -21,9 +21,18 @@ interface DesignInspiration {
   creator: string;
 }
 
-// Fetch design inspiration from Dribbble via Apify
+// Fetch design inspiration from Dribbble via Apify (non-blocking with cache)
+const inspirationCache = new Map<string, { data: DesignInspiration[]; timestamp: number }>();
+const CACHE_TTL = 3600000; // 1 hour
+
 async function fetchDesignInspiration(businessType: string): Promise<DesignInspiration[]> {
   if (!APIFY_TOKEN) return [];
+
+  // Check cache first
+  const cached = inspirationCache.get(businessType);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.data;
+  }
 
   const searchQueries: Record<string, string> = {
     restaurant: 'restaurant website landing page',
@@ -39,42 +48,47 @@ async function fetchDesignInspiration(businessType: string): Promise<DesignInspi
   const query = searchQueries[businessType] || searchQueries.general;
 
   try {
-    // Start the Apify actor run
+    // Start the Apify actor run with webhook (fire and forget approach)
     const runResponse = await axios.post(
       `https://api.apify.com/v2/acts/${APIFY_DRIBBBLE_ACTOR}/runs?token=${APIFY_TOKEN}`,
       {
         startUrls: [{ url: `https://dribbble.com/search/${encodeURIComponent(query)}` }],
-        maxItems: 6,
+        maxItems: 4,
       },
-      { timeout: 30000 }
+      { timeout: 8000 } // Quick timeout - don't block generation
     );
 
     const runId = runResponse.data.data.id;
 
-    // Wait for completion (poll for up to 60 seconds)
-    let attempts = 0;
-    while (attempts < 12) {
-      await new Promise(r => setTimeout(r, 5000));
-      const statusResponse = await axios.get(
-        `https://api.apify.com/v2/actor-runs/${runId}?token=${APIFY_TOKEN}`
-      );
-      if (statusResponse.data.data.status === 'SUCCEEDED') break;
-      if (statusResponse.data.data.status === 'FAILED') return [];
-      attempts++;
+    // Quick poll - only 2 attempts (4 seconds total max)
+    for (let i = 0; i < 2; i++) {
+      await new Promise(r => setTimeout(r, 2000));
+      try {
+        const statusResponse = await axios.get(
+          `https://api.apify.com/v2/actor-runs/${runId}?token=${APIFY_TOKEN}`,
+          { timeout: 3000 }
+        );
+        if (statusResponse.data.data.status === 'SUCCEEDED') {
+          const datasetResponse = await axios.get(
+            `https://api.apify.com/v2/actor-runs/${runId}/dataset/items?token=${APIFY_TOKEN}`,
+            { timeout: 3000 }
+          );
+          const results = datasetResponse.data.slice(0, 4).map((item: any) => ({
+            title: item.title || '',
+            imageUrl: item.imageUrl || item.image || '',
+            colors: item.colors || [],
+            tags: item.tags || [],
+            creator: item.user?.name || item.creator || '',
+          }));
+          inspirationCache.set(businessType, { data: results, timestamp: Date.now() });
+          return results;
+        }
+        if (statusResponse.data.data.status === 'FAILED') return [];
+      } catch { /* continue */ }
     }
 
-    // Fetch results
-    const datasetResponse = await axios.get(
-      `https://api.apify.com/v2/actor-runs/${runId}/dataset/items?token=${APIFY_TOKEN}`
-    );
-
-    return datasetResponse.data.slice(0, 6).map((item: any) => ({
-      title: item.title || '',
-      imageUrl: item.imageUrl || item.image || '',
-      colors: item.colors || [],
-      tags: item.tags || [],
-      creator: item.user?.name || item.creator || '',
-    }));
+    // If still running, return empty - don't block generation
+    return [];
   } catch (error) {
     console.error('Apify fetch failed:', error);
     return [];
