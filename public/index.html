@@ -487,6 +487,28 @@
                 </div>
 
                 <div>
+                  <label class="block text-sm font-medium text-forge-muted mb-2">
+                    Business Images <span class="text-forge-muted/60">(up to 5 image URLs)</span>
+                  </label>
+                  <div id="image-urls-container" class="space-y-2">
+                    <div class="flex gap-2">
+                      <input
+                        type="url"
+                        name="imageUrl"
+                        placeholder="https://example.com/image1.jpg"
+                        class="forge-input flex-1 px-4 py-3 rounded-xl text-forge-text font-mono text-sm"
+                      >
+                      <button type="button" onclick="addImageUrlField()" class="px-4 py-3 border border-white/10 hover:border-white/20 rounded-xl text-forge-muted hover:text-forge-text transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                  <p class="text-xs text-forge-muted/60 mt-2">Add URLs to your business photos for a more personalized website</p>
+                </div>
+
+                <div>
                   <label class="block text-sm font-medium text-forge-muted mb-2">Additional Information</label>
                   <textarea
                     id="additionalInfo"
@@ -957,6 +979,23 @@
       activeSiteId = null;
       activeSiteBadge.classList.add('hidden');
       document.getElementById('generate-form').reset();
+      // Reset image URL fields to just one empty field
+      const container = document.getElementById('image-urls-container');
+      container.innerHTML = `
+        <div class="flex gap-2">
+          <input
+            type="url"
+            name="imageUrl"
+            placeholder="https://example.com/image1.jpg"
+            class="forge-input flex-1 px-4 py-3 rounded-xl text-forge-text font-mono text-sm"
+          >
+          <button type="button" onclick="addImageUrlField()" class="px-4 py-3 border border-white/10 hover:border-white/20 rounded-xl text-forge-muted hover:text-forge-text transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+          </button>
+        </div>
+      `;
       showSection('generator');
       updatePageHeader('generator');
       renderSitesList();
@@ -1042,6 +1081,32 @@
       updatePageHeader('dashboard');
     }
 
+    // Add image URL field (max 5)
+    function addImageUrlField() {
+      const container = document.getElementById('image-urls-container');
+      const existingFields = container.querySelectorAll('input[name="imageUrl"]');
+      if (existingFields.length >= 5) {
+        alert('Maximum 5 images allowed');
+        return;
+      }
+      const div = document.createElement('div');
+      div.className = 'flex gap-2';
+      div.innerHTML = `
+        <input
+          type="url"
+          name="imageUrl"
+          placeholder="https://example.com/image${existingFields.length + 1}.jpg"
+          class="forge-input flex-1 px-4 py-3 rounded-xl text-forge-text font-mono text-sm"
+        >
+        <button type="button" onclick="this.parentElement.remove()" class="px-4 py-3 border border-red-500/30 hover:border-red-500/50 hover:bg-red-500/10 rounded-xl text-red-400 transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      `;
+      container.appendChild(div);
+    }
+
     async function handleGenerate(e) {
       e.preventDefault();
 
@@ -1049,6 +1114,15 @@
       const data = Object.fromEntries(formData.entries());
       const businessName = data.businessName;
       const location = data.location;
+
+      // Collect all image URLs
+      const imageUrls = Array.from(document.querySelectorAll('input[name="imageUrl"]'))
+        .map(input => input.value.trim())
+        .filter(url => url && url.startsWith('http'));
+
+      // Remove single imageUrl and add array
+      delete data.imageUrl;
+      const requestData = { ...data, imageUrls };
 
       showSection('progress');
       updatePageHeader('generator');
@@ -1058,7 +1132,7 @@
         const response = await fetch(`${API_BASE}/generate`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data),
+          body: JSON.stringify(requestData),
         });
 
         const result = await response.json();

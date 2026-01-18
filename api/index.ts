@@ -6,8 +6,39 @@ import { v4 as uuidv4 } from 'uuid';
 import Anthropic from '@anthropic-ai/sdk';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
+import { sql } from '@vercel/postgres';
 
 const app = express();
+
+// Database initialization
+let dbInitialized = false;
+async function initDatabase() {
+  if (dbInitialized || !process.env.POSTGRES_URL) return;
+  try {
+    await sql`
+      CREATE TABLE IF NOT EXISTS sites (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        job_id VARCHAR(255) UNIQUE NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        location VARCHAR(255),
+        url TEXT,
+        preview_url TEXT,
+        deployed BOOLEAN DEFAULT false,
+        quality_score INTEGER DEFAULT 0,
+        business_data JSONB,
+        html_content TEXT,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
+    `;
+    await sql`CREATE INDEX IF NOT EXISTS idx_sites_job_id ON sites(job_id)`;
+    dbInitialized = true;
+    console.log('Database initialized');
+  } catch (err) {
+    console.error('Database init failed:', err);
+  }
+}
+initDatabase();
 
 // Apify client for design inspiration
 const APIFY_TOKEN = process.env.APIFY_TOKEN;
@@ -118,6 +149,7 @@ const generateRequestSchema = z.object({
   instagramUrl: z.string().optional(),
   linkedinUrl: z.string().url().optional().or(z.literal('')),
   additionalInfo: z.string().optional(),
+  imageUrls: z.array(z.string().url()).max(5).optional(), // Up to 5 image URLs
 });
 
 // Health check
@@ -133,8 +165,31 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Sites list endpoint - returns completed sites from jobs
-app.get('/api/sites', (_req, res) => {
+// Sites list endpoint - returns completed sites from jobs and database
+app.get('/api/sites', async (_req, res) => {
+  try {
+    // Try to fetch from database first
+    if (process.env.POSTGRES_URL) {
+      await initDatabase();
+      const result = await sql`SELECT * FROM sites ORDER BY created_at DESC`;
+      const dbSites = result.rows.map(row => ({
+        id: row.id,
+        jobId: row.job_id,
+        name: row.name,
+        location: row.location || '',
+        url: row.url,
+        previewUrl: row.preview_url,
+        deployed: row.deployed,
+        qualityScore: row.quality_score || 0,
+        createdAt: row.created_at,
+      }));
+      return res.json({ sites: dbSites });
+    }
+  } catch (err) {
+    console.error('Database fetch failed, falling back to memory:', err);
+  }
+
+  // Fallback to in-memory
   const completedSites = Array.from(jobs.values())
     .filter(job => job.status === 'complete' && job.deployment?.success)
     .map(job => ({
@@ -152,8 +207,23 @@ app.get('/api/sites', (_req, res) => {
 });
 
 // Delete site endpoint
-app.delete('/api/sites/:id', (req, res) => {
+app.delete('/api/sites/:id', async (req, res) => {
   const { id } = req.params;
+  try {
+    // Try database first
+    if (process.env.POSTGRES_URL) {
+      await initDatabase();
+      const result = await sql`DELETE FROM sites WHERE id = ${id}::uuid OR job_id = ${id}`;
+      if ((result.rowCount ?? 0) > 0) {
+        jobs.delete(id);
+        return res.json({ success: true });
+      }
+    }
+  } catch (err) {
+    console.error('Database delete failed:', err);
+  }
+
+  // Fallback to in-memory
   if (jobs.has(id)) {
     jobs.delete(id);
     res.json({ success: true });
@@ -426,9 +496,115 @@ async function runGeneration(jobId: string, request: any) {
           title: $('title').text(),
           description: $('meta[name="description"]').attr('content'),
           content: $('body').text().substring(0, 5000),
+          images: [] as string[],
         };
+        // Extract images from website
+        $('img').each((_, el) => {
+          const src = $(el).attr('src');
+          if (src && src.startsWith('http') && scrapedData.website.images.length < 5) {
+            scrapedData.website.images.push(src);
+          }
+        });
+        // Also check og:image
+        const ogImage = $('meta[property="og:image"]').attr('content');
+        if (ogImage && ogImage.startsWith('http')) {
+          scrapedData.website.images.unshift(ogImage);
+        }
       } catch {}
     }
+
+    // Collect business images from various sources
+    const businessImages: string[] = [];
+
+    // Add user-provided images first (highest priority)
+    if (request.imageUrls && request.imageUrls.length > 0) {
+      businessImages.push(...request.imageUrls);
+    }
+
+    // Scrape Facebook for images if URL provided
+    if (request.facebookUrl) {
+      try {
+        const response = await axios.get(request.facebookUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': 'text/html',
+          },
+          timeout: 10000,
+        });
+        const $ = cheerio.load(response.data);
+        // Extract og:image from Facebook page
+        const ogImage = $('meta[property="og:image"]').attr('content');
+        if (ogImage && ogImage.startsWith('http') && !businessImages.includes(ogImage)) {
+          businessImages.push(ogImage);
+        }
+        // Try to find profile/cover images
+        $('img[data-imgperflogname], img[alt*="profile"], img[alt*="cover"]').each((_, el) => {
+          const src = $(el).attr('src');
+          if (src && src.startsWith('http') && !businessImages.includes(src) && businessImages.length < 5) {
+            businessImages.push(src);
+          }
+        });
+        scrapedData.facebook = { pageUrl: request.facebookUrl };
+      } catch (err) {
+        console.error('Facebook scraping failed:', err);
+      }
+    }
+
+    // Scrape Instagram for images if URL provided
+    if (request.instagramUrl) {
+      try {
+        const response = await axios.get(request.instagramUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': 'text/html',
+          },
+          timeout: 10000,
+        });
+        const $ = cheerio.load(response.data);
+        // Extract og:image from Instagram
+        const ogImage = $('meta[property="og:image"]').attr('content');
+        if (ogImage && ogImage.startsWith('http') && !businessImages.includes(ogImage)) {
+          businessImages.push(ogImage);
+        }
+        // Try to extract images from JSON data in script tags
+        $('script[type="application/ld+json"]').each((_, el) => {
+          try {
+            const json = JSON.parse($(el).html() || '{}');
+            if (json.image && typeof json.image === 'string' && !businessImages.includes(json.image)) {
+              businessImages.push(json.image);
+            }
+          } catch {}
+        });
+        scrapedData.instagram = { profileUrl: request.instagramUrl };
+      } catch (err) {
+        console.error('Instagram scraping failed:', err);
+      }
+    }
+
+    // Extract Google Maps photos if available (from og:image)
+    if (scrapedData.google) {
+      // Google Maps og:image is often a photo of the business
+      try {
+        const response = await axios.get(request.googleMapsUrl, { timeout: 5000 });
+        const $ = cheerio.load(response.data);
+        const ogImage = $('meta[property="og:image"]').attr('content');
+        if (ogImage && ogImage.startsWith('http') && !businessImages.includes(ogImage)) {
+          businessImages.push(ogImage);
+        }
+      } catch {}
+    }
+
+    // Add website images if we still need more
+    if (scrapedData.website?.images && businessImages.length < 5) {
+      for (const img of scrapedData.website.images) {
+        if (!businessImages.includes(img) && businessImages.length < 5) {
+          businessImages.push(img);
+        }
+      }
+    }
+
+    // Store collected images
+    scrapedData.businessImages = businessImages.slice(0, 5);
 
     job.scrapedData = scrapedData;
     job.progress = 30;
@@ -461,6 +637,7 @@ Return JSON (infer businessType from one of: restaurant, retail, healthcare, pro
   "contact": { "phone": "", "email": "", "address": "", "city": "", "state": "" },
   "hours": { "Monday": "9am - 5pm" },
   "rating": { "score": 4.5, "count": 100 },
+  "images": ${JSON.stringify(scrapedData.businessImages || [])},
   "dataQuality": { "completenessScore": 0, "confidence": "medium" }
 }`;
 
@@ -549,6 +726,20 @@ Visual Effects: ${design.effects.join(', ')}
 7. **Contact**: Two-column - contact info/hours on left, simple form on right.
 8. **Footer**: Logo, quick links, social icons, copyright.
 
+## BUSINESS IMAGES
+${extractedData.images && extractedData.images.length > 0 ? `
+The following REAL business images are available - USE THEM in the website:
+${extractedData.images.map((img: string, i: number) => `${i + 1}. ${img}`).join('\n')}
+
+Use these images in:
+- Hero section background or featured image
+- About section
+- Gallery/portfolio section (if applicable)
+- Any other relevant sections
+
+Apply proper styling: object-fit: cover, appropriate aspect ratios, subtle hover effects.
+` : 'No business images available - use elegant placeholder divs with brand colors.'}
+
 ## CRITICAL DESIGN RULES
 - NO generic blue/purple gradients
 - NO predictable symmetrical layouts - use intentional asymmetry
@@ -556,7 +747,7 @@ Visual Effects: ${design.effects.join(', ')}
 - Generous whitespace - let elements breathe
 - Shadows should be atmospheric, not flat drop-shadows
 - Buttons: distinctive styling that matches the aesthetic (not generic rounded pills)
-- Images: use placeholder divs with background colors (will be replaced later)
+- Images: ${extractedData.images?.length > 0 ? 'USE THE PROVIDED REAL IMAGES with proper styling' : 'use elegant placeholder divs with brand colors'}
 - Micro-interactions on hover states for all interactive elements
 - REVIEWS ARE SOCIAL PROOF: If testimonials exist, make that section visually prominent with:
   - Large decorative quotation marks (use CSS ::before/::after)
@@ -624,6 +815,35 @@ Return ONLY the complete HTML document starting with <!DOCTYPE html>. No markdow
     job.progress = 100;
     job.currentStep = job.deployment?.success ? 'Deployment complete!' : 'Deployment failed';
     job.completedAt = new Date();
+
+    // Save to database if deployment successful and database available
+    if (job.deployment?.success && process.env.POSTGRES_URL) {
+      try {
+        await initDatabase();
+        await sql`
+          INSERT INTO sites (job_id, name, location, url, preview_url, deployed, quality_score, business_data, html_content)
+          VALUES (
+            ${jobId},
+            ${extractedData?.business?.name || request.businessName},
+            ${request.location || null},
+            ${job.deployment.url},
+            ${job.deployment.previewUrl},
+            true,
+            ${extractedData?.dataQuality?.completenessScore || 0},
+            ${JSON.stringify(extractedData)},
+            ${html}
+          )
+          ON CONFLICT (job_id) DO UPDATE SET
+            url = EXCLUDED.url,
+            preview_url = EXCLUDED.preview_url,
+            deployed = true,
+            updated_at = NOW()
+        `;
+        console.log('Site saved to database:', jobId);
+      } catch (dbErr) {
+        console.error('Failed to save site to database:', dbErr);
+      }
+    }
 
   } catch (err: any) {
     job.status = 'failed';
