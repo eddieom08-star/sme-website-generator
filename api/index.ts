@@ -521,69 +521,158 @@ async function runGeneration(jobId: string, request: any) {
       businessImages.push(...request.imageUrls);
     }
 
-    // Scrape Facebook for images if URL provided
-    if (request.facebookUrl) {
+    // Scrape Facebook for images using Apify (if token available)
+    if (request.facebookUrl && APIFY_TOKEN) {
       try {
-        const response = await axios.get(request.facebookUrl, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            'Accept': 'text/html',
+        job.currentStep = 'Fetching Facebook images...';
+        const runResponse = await axios.post(
+          `https://api.apify.com/v2/acts/apify~facebook-pages-scraper/runs?token=${APIFY_TOKEN}`,
+          {
+            startUrls: [{ url: request.facebookUrl }],
+            maxPosts: 0,
+            maxPhotos: 3,
+            maxReviews: 0,
           },
-          timeout: 10000,
-        });
-        const $ = cheerio.load(response.data);
-        // Extract og:image from Facebook page
-        const ogImage = $('meta[property="og:image"]').attr('content');
-        if (ogImage && ogImage.startsWith('http') && !businessImages.includes(ogImage)) {
-          businessImages.push(ogImage);
-        }
-        // Try to find profile/cover images
-        $('img[data-imgperflogname], img[alt*="profile"], img[alt*="cover"]').each((_, el) => {
-          const src = $(el).attr('src');
-          if (src && src.startsWith('http') && !businessImages.includes(src) && businessImages.length < 5) {
-            businessImages.push(src);
+          { timeout: 10000 }
+        );
+        const runId = runResponse.data.data.id;
+
+        // Quick poll for results (max 6 seconds)
+        for (let i = 0; i < 3; i++) {
+          await new Promise(r => setTimeout(r, 2000));
+          const statusRes = await axios.get(
+            `https://api.apify.com/v2/actor-runs/${runId}?token=${APIFY_TOKEN}`,
+            { timeout: 3000 }
+          );
+          if (statusRes.data.data.status === 'SUCCEEDED') {
+            const dataRes = await axios.get(
+              `https://api.apify.com/v2/actor-runs/${runId}/dataset/items?token=${APIFY_TOKEN}`,
+              { timeout: 3000 }
+            );
+            const fbData = dataRes.data[0];
+            if (fbData) {
+              // Get profile/cover images
+              if (fbData.profilePicture && !businessImages.includes(fbData.profilePicture)) {
+                businessImages.push(fbData.profilePicture);
+              }
+              if (fbData.coverPhoto && !businessImages.includes(fbData.coverPhoto)) {
+                businessImages.push(fbData.coverPhoto);
+              }
+              // Get photos from posts
+              if (fbData.photos && Array.isArray(fbData.photos)) {
+                for (const photo of fbData.photos.slice(0, 3)) {
+                  const photoUrl = photo.url || photo.imageUrl || photo;
+                  if (typeof photoUrl === 'string' && photoUrl.startsWith('http') && !businessImages.includes(photoUrl)) {
+                    businessImages.push(photoUrl);
+                  }
+                }
+              }
+              scrapedData.facebook = { pageUrl: request.facebookUrl, name: fbData.name };
+            }
+            break;
           }
-        });
-        scrapedData.facebook = { pageUrl: request.facebookUrl };
+          if (statusRes.data.data.status === 'FAILED') break;
+        }
       } catch (err) {
-        console.error('Facebook scraping failed:', err);
+        console.error('Facebook Apify scraping failed:', err);
       }
     }
 
-    // Scrape Instagram for images if URL provided
-    if (request.instagramUrl) {
+    // Scrape Instagram for images using Apify (if token available)
+    if (request.instagramUrl && APIFY_TOKEN) {
       try {
-        const response = await axios.get(request.instagramUrl, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            'Accept': 'text/html',
-          },
-          timeout: 10000,
-        });
-        const $ = cheerio.load(response.data);
-        // Extract og:image from Instagram
-        const ogImage = $('meta[property="og:image"]').attr('content');
-        if (ogImage && ogImage.startsWith('http') && !businessImages.includes(ogImage)) {
-          businessImages.push(ogImage);
-        }
-        // Try to extract images from JSON data in script tags
-        $('script[type="application/ld+json"]').each((_, el) => {
-          try {
-            const json = JSON.parse($(el).html() || '{}');
-            if (json.image && typeof json.image === 'string' && !businessImages.includes(json.image)) {
-              businessImages.push(json.image);
+        job.currentStep = 'Fetching Instagram images...';
+        // Extract username from Instagram URL
+        const igMatch = request.instagramUrl.match(/instagram\.com\/([^\/\?]+)/);
+        const username = igMatch ? igMatch[1] : null;
+
+        if (username) {
+          const runResponse = await axios.post(
+            `https://api.apify.com/v2/acts/apify~instagram-profile-scraper/runs?token=${APIFY_TOKEN}`,
+            {
+              usernames: [username],
+              resultsLimit: 5,
+            },
+            { timeout: 10000 }
+          );
+          const runId = runResponse.data.data.id;
+
+          // Quick poll for results (max 6 seconds)
+          for (let i = 0; i < 3; i++) {
+            await new Promise(r => setTimeout(r, 2000));
+            const statusRes = await axios.get(
+              `https://api.apify.com/v2/actor-runs/${runId}?token=${APIFY_TOKEN}`,
+              { timeout: 3000 }
+            );
+            if (statusRes.data.data.status === 'SUCCEEDED') {
+              const dataRes = await axios.get(
+                `https://api.apify.com/v2/actor-runs/${runId}/dataset/items?token=${APIFY_TOKEN}`,
+                { timeout: 3000 }
+              );
+              const igData = dataRes.data[0];
+              if (igData) {
+                // Get profile picture
+                if (igData.profilePicUrl && !businessImages.includes(igData.profilePicUrl)) {
+                  businessImages.push(igData.profilePicUrl);
+                }
+                // Get recent post images
+                if (igData.latestPosts && Array.isArray(igData.latestPosts)) {
+                  for (const post of igData.latestPosts.slice(0, 4)) {
+                    const imgUrl = post.displayUrl || post.imageUrl || post.url;
+                    if (imgUrl && !businessImages.includes(imgUrl) && businessImages.length < 5) {
+                      businessImages.push(imgUrl);
+                    }
+                  }
+                }
+                scrapedData.instagram = { profileUrl: request.instagramUrl, username: igData.username, bio: igData.biography };
+              }
+              break;
             }
-          } catch {}
-        });
-        scrapedData.instagram = { profileUrl: request.instagramUrl };
+            if (statusRes.data.data.status === 'FAILED') break;
+          }
+        }
       } catch (err) {
-        console.error('Instagram scraping failed:', err);
+        console.error('Instagram Apify scraping failed:', err);
+      }
+    }
+
+    // Fallback: Try direct scraping for Facebook/Instagram if Apify not available
+    if (!APIFY_TOKEN) {
+      // Facebook fallback
+      if (request.facebookUrl && businessImages.length < 5) {
+        try {
+          const response = await axios.get(request.facebookUrl, {
+            headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1)' },
+            timeout: 8000,
+          });
+          const $ = cheerio.load(response.data);
+          const ogImage = $('meta[property="og:image"]').attr('content');
+          if (ogImage && ogImage.startsWith('http') && !businessImages.includes(ogImage)) {
+            businessImages.push(ogImage);
+          }
+          scrapedData.facebook = { pageUrl: request.facebookUrl };
+        } catch {}
+      }
+
+      // Instagram fallback
+      if (request.instagramUrl && businessImages.length < 5) {
+        try {
+          const response = await axios.get(request.instagramUrl, {
+            headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1)' },
+            timeout: 8000,
+          });
+          const $ = cheerio.load(response.data);
+          const ogImage = $('meta[property="og:image"]').attr('content');
+          if (ogImage && ogImage.startsWith('http') && !businessImages.includes(ogImage)) {
+            businessImages.push(ogImage);
+          }
+          scrapedData.instagram = { profileUrl: request.instagramUrl };
+        } catch {}
       }
     }
 
     // Extract Google Maps photos if available (from og:image)
-    if (scrapedData.google) {
-      // Google Maps og:image is often a photo of the business
+    if (scrapedData.google && request.googleMapsUrl) {
       try {
         const response = await axios.get(request.googleMapsUrl, { timeout: 5000 });
         const $ = cheerio.load(response.data);
