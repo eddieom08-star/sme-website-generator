@@ -133,6 +133,35 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Sites list endpoint - returns completed sites from jobs
+app.get('/api/sites', (_req, res) => {
+  const completedSites = Array.from(jobs.values())
+    .filter(job => job.status === 'complete' && job.deployment?.success)
+    .map(job => ({
+      id: job.id,
+      jobId: job.id,
+      name: job.extractedData?.business?.name || 'Unknown',
+      location: job.extractedData?.contact?.city || '',
+      url: job.deployment?.url,
+      previewUrl: job.deployment?.previewUrl,
+      deployed: true,
+      qualityScore: job.extractedData?.dataQuality?.completenessScore || 0,
+      createdAt: job.startedAt?.toISOString(),
+    }));
+  res.json({ sites: completedSites });
+});
+
+// Delete site endpoint
+app.delete('/api/sites/:id', (req, res) => {
+  const { id } = req.params;
+  if (jobs.has(id)) {
+    jobs.delete(id);
+    res.json({ success: true });
+  } else {
+    res.status(404).json({ error: 'Site not found' });
+  }
+});
+
 // Generate endpoint
 app.post('/api/generate', async (req, res) => {
   try {
