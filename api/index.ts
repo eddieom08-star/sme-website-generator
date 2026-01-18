@@ -296,20 +296,93 @@ async function runGeneration(jobId: string, request: any) {
 
     const scrapedData: any = { additionalInfo: request.additionalInfo };
 
-    // Scrape Google Maps if provided
+    // Scrape Google Maps if provided - enhanced extraction
     if (request.googleMapsUrl) {
       try {
         const response = await axios.get(request.googleMapsUrl, {
-          headers: { 'User-Agent': 'Mozilla/5.0' },
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+          },
           maxRedirects: 5,
-          timeout: 10000,
+          timeout: 15000,
         });
+
         const $ = cheerio.load(response.data);
-        scrapedData.google = {
+
+        // Basic meta extraction
+        const googleData: any = {
           name: $('meta[property="og:title"]').attr('content') || request.businessName,
           description: $('meta[property="og:description"]').attr('content'),
+          reviews: [],
+          rating: null,
+          reviewCount: null,
+          address: null,
+          phone: null,
+          hours: null,
+          categories: [],
         };
-      } catch {}
+
+        // Try to extract embedded JSON data from script tags
+        // Google Maps embeds business data in window.APP_INITIALIZATION_STATE or similar
+        const scriptTags = $('script').toArray();
+        for (const script of scriptTags) {
+          const content = $(script).html() || '';
+
+          // Look for review patterns in the page
+          // Reviews often appear as arrays with rating, text, author
+          const reviewPattern = /\["([^"]{20,500})","[^"]*",(\d),/g;
+          let match;
+          while ((match = reviewPattern.exec(content)) !== null && googleData.reviews.length < 8) {
+            const reviewText = match[1];
+            const rating = parseInt(match[2]);
+            if (rating >= 1 && rating <= 5 && reviewText.length > 30) {
+              googleData.reviews.push({
+                text: reviewText.replace(/\\n/g, ' ').replace(/\\"/g, '"').substring(0, 300),
+                rating: rating,
+              });
+            }
+          }
+
+          // Extract rating from meta or embedded data
+          const ratingMatch = content.match(/(\d\.\d)\s*stars?|rating['":\s]+(\d\.\d)/i);
+          if (ratingMatch && !googleData.rating) {
+            googleData.rating = parseFloat(ratingMatch[1] || ratingMatch[2]);
+          }
+
+          // Extract review count
+          const countMatch = content.match(/(\d{1,5})\s*reviews?/i);
+          if (countMatch && !googleData.reviewCount) {
+            googleData.reviewCount = parseInt(countMatch[1]);
+          }
+
+          // Look for phone numbers
+          const phoneMatch = content.match(/["'](\+?[\d\s\-()]{10,20})["']/);
+          if (phoneMatch && !googleData.phone) {
+            googleData.phone = phoneMatch[1].trim();
+          }
+        }
+
+        // Also try to extract from visible text patterns
+        const pageText = $('body').text();
+
+        // Rating from visible text
+        if (!googleData.rating) {
+          const visibleRating = pageText.match(/(\d\.\d)\s*\(\d+\s*reviews?\)/i);
+          if (visibleRating) googleData.rating = parseFloat(visibleRating[1]);
+        }
+
+        // Review count from visible text
+        if (!googleData.reviewCount) {
+          const visibleCount = pageText.match(/\((\d{1,5})\s*reviews?\)/i);
+          if (visibleCount) googleData.reviewCount = parseInt(visibleCount[1]);
+        }
+
+        scrapedData.google = googleData;
+      } catch (err) {
+        console.error('Google Maps scraping failed:', err);
+      }
     }
 
     // Scrape website if provided
@@ -344,12 +417,18 @@ Location: ${request.location || 'Unknown'}
 Scraped Data:
 ${JSON.stringify(scrapedData, null, 2)}
 
+IMPORTANT: If the scraped Google data contains reviews, convert them into testimonials.
+- Use the review text as the quote
+- Generate a plausible first name + last initial for the author (e.g., "Sarah M.", "James T.")
+- Use the rating from the review (1-5 stars)
+- Include up to 6 of the best/most detailed reviews as testimonials
+
 Return JSON (infer businessType from one of: restaurant, retail, healthcare, professional, creative, beauty, fitness, general):
 {
   "business": { "name": "", "tagline": "", "descriptionShort": "", "descriptionLong": "", "businessType": "general" },
   "services": [{ "name": "", "description": "", "icon": "emoji" }],
   "uniqueSellingPoints": ["", "", ""],
-  "testimonials": [{ "quote": "", "author": "", "rating": 5 }],
+  "testimonials": [{ "quote": "", "author": "", "rating": 5, "source": "Google" }],
   "contact": { "phone": "", "email": "", "address": "", "city": "", "state": "" },
   "hours": { "Monday": "9am - 5pm" },
   "rating": { "score": 4.5, "count": 100 },
@@ -431,7 +510,13 @@ Visual Effects: ${design.effects.join(', ')}
 3. **Trust Bar**: Rating stars, review count, key differentiators in a subtle row.
 4. **Services/Menu**: Grid or cards showcasing 3-6 key offerings with icons/emojis.
 5. **About**: Split layout - compelling story on one side, key stats/highlights on other.
-6. **Testimonials**: Featured quotes with author attribution. Elegant styling.
+6. **Reviews/Testimonials**: IMPORTANT - Create an eye-catching testimonials section:
+   - Use a card-based layout (2-3 columns on desktop, 1 on mobile)
+   - Each card should display: star rating (use ★ filled and ☆ empty), the quote in elegant typography, author name, and "Google Review" badge
+   - Add subtle background patterns or gradients to make this section visually distinct
+   - Include a "See All Reviews" link to Google Maps if rating data exists
+   - Use quote marks or decorative elements to frame each testimonial
+   - Stagger card heights or use masonry layout for visual interest
 7. **Contact**: Two-column - contact info/hours on left, simple form on right.
 8. **Footer**: Logo, quick links, social icons, copyright.
 
@@ -444,6 +529,12 @@ Visual Effects: ${design.effects.join(', ')}
 - Buttons: distinctive styling that matches the aesthetic (not generic rounded pills)
 - Images: use placeholder divs with background colors (will be replaced later)
 - Micro-interactions on hover states for all interactive elements
+- REVIEWS ARE SOCIAL PROOF: If testimonials exist, make that section visually prominent with:
+  - Large decorative quotation marks (use CSS ::before/::after)
+  - Star ratings using golden/yellow color for filled stars
+  - Subtle card hover animations (lift/scale)
+  - "Verified Google Review" badges with Google colors
+  - Overall rating prominently displayed (e.g., "4.8 ★ from 127 reviews")
 
 ## OUTPUT
 Return ONLY the complete HTML document starting with <!DOCTYPE html>. No markdown, no explanations.`;
