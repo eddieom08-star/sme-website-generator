@@ -543,7 +543,7 @@
                     Live
                   </span>
                 </div>
-                <div class="flex gap-3">
+                <div class="flex flex-wrap gap-3">
                   <a id="site-live-link" href="#" target="_blank" class="forge-btn-primary px-5 py-2.5 text-forge-bg rounded-lg text-sm font-medium inline-flex items-center gap-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
@@ -553,6 +553,18 @@
                   <a id="site-preview-link" href="#" target="_blank" class="px-5 py-2.5 border border-white/10 hover:border-white/20 rounded-lg text-sm font-medium transition-colors">
                     Preview
                   </a>
+                  <button id="regenerate-btn" class="px-5 py-2.5 border border-amber-500/30 hover:border-amber-500/50 hover:bg-amber-500/10 rounded-lg text-sm font-medium text-amber-400 transition-colors inline-flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                    Regenerate
+                  </button>
+                  <button id="delete-btn" class="px-5 py-2.5 border border-red-500/30 hover:border-red-500/50 hover:bg-red-500/10 rounded-lg text-sm font-medium text-red-400 transition-colors inline-flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                    Delete
+                  </button>
                 </div>
               </div>
 
@@ -763,6 +775,8 @@
       document.getElementById('quick-new-site').addEventListener('click', showGenerator);
       document.getElementById('generate-form').addEventListener('submit', handleGenerate);
       document.getElementById('retry-btn').addEventListener('click', showGenerator);
+      document.getElementById('regenerate-btn').addEventListener('click', handleRegenerate);
+      document.getElementById('delete-btn').addEventListener('click', handleDelete);
 
       document.querySelectorAll('.submenu-nav').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -989,6 +1003,43 @@
           showSiteSection(jobId, 'overview');
         }
       } catch (err) { console.error('Poll error:', err); }
+    }
+
+    async function handleRegenerate() {
+      if (!activeSiteId) return;
+      const site = sites.find(s => s.id === activeSiteId);
+      if (!site) return;
+
+      if (!confirm(`Regenerate website for "${site.name}"? This will create a new version.`)) return;
+
+      // Pre-fill form with site data and show generator
+      document.getElementById('businessName').value = site.name || '';
+      document.getElementById('location').value = site.location || '';
+      showSection('generator');
+      updatePageHeader('generator');
+    }
+
+    async function handleDelete() {
+      if (!activeSiteId) return;
+      const site = sites.find(s => s.id === activeSiteId);
+      if (!site) return;
+
+      if (!confirm(`Delete "${site.name}"? This will remove it from your list.`)) return;
+
+      // Remove from local storage
+      sites = sites.filter(s => s.id !== activeSiteId);
+      localStorage.setItem('websiteforge_sites', JSON.stringify(sites));
+
+      // Try to delete from database
+      try {
+        await fetch(`${API_BASE}/sites/${site.jobId}`, { method: 'DELETE' });
+      } catch (err) { console.log('Database delete skipped'); }
+
+      activeSiteId = null;
+      renderSitesList();
+      updateDashboardStats();
+      showSection('dashboard-home');
+      updatePageHeader('dashboard');
     }
 
     async function handleGenerate(e) {
