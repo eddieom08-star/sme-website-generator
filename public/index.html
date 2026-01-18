@@ -687,14 +687,124 @@
         <div id="ai-receptionist-section" class="hidden fade-in">
           <div class="glass-card rounded-2xl p-8">
             <h3 class="text-lg font-semibold mb-6">AI Receptionist</h3>
-            <div class="text-center py-16">
-              <div class="w-16 h-16 mx-auto mb-5 rounded-2xl bg-amber-500/10 flex items-center justify-center">
-                <svg class="w-8 h-8 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+
+            <!-- Not configured message -->
+            <div id="agent-not-configured" class="hidden text-center py-12">
+              <div class="w-16 h-16 mx-auto mb-5 rounded-2xl bg-forge-muted/10 flex items-center justify-center">
+                <svg class="w-8 h-8 text-forge-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                 </svg>
               </div>
-              <p class="font-medium">AI Receptionist coming soon</p>
-              <p class="text-sm text-forge-muted mt-2">24/7 automated customer support</p>
+              <p class="font-medium text-forge-muted">Service Not Configured</p>
+              <p class="text-sm text-forge-muted/60 mt-2">Add RETELL_API_KEY to enable AI Receptionist</p>
+            </div>
+
+            <!-- Agent Creation UI -->
+            <div id="agent-create-ui">
+              <div class="text-center mb-8">
+                <div class="w-16 h-16 mx-auto mb-5 rounded-2xl bg-amber-500/10 flex items-center justify-center">
+                  <svg class="w-8 h-8 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+                  </svg>
+                </div>
+                <p class="font-medium">Add Voice or Chat Agent</p>
+                <p class="text-sm text-forge-muted mt-2">Handle customer inquiries 24/7 with AI</p>
+              </div>
+
+              <!-- Agent Type Selection -->
+              <div class="flex justify-center gap-4 mb-8">
+                <button
+                  type="button"
+                  id="voice-agent-btn"
+                  class="agent-type-btn flex-1 max-w-[160px] py-4 px-5 border-2 border-amber-500 bg-amber-500/10 text-amber-400 font-medium rounded-xl transition-all"
+                  data-type="voice"
+                >
+                  <svg class="w-6 h-6 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+                  </svg>
+                  <span class="block text-sm">Voice Agent</span>
+                </button>
+                <button
+                  type="button"
+                  id="chat-agent-btn"
+                  class="agent-type-btn flex-1 max-w-[160px] py-4 px-5 border-2 border-white/10 text-forge-muted font-medium rounded-xl hover:border-white/20 transition-all"
+                  data-type="chat"
+                >
+                  <svg class="w-6 h-6 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                  </svg>
+                  <span class="block text-sm">Chat Agent</span>
+                </button>
+              </div>
+
+              <!-- Create Button -->
+              <button
+                type="button"
+                id="create-agent-btn"
+                class="forge-btn-primary w-full py-4 text-forge-bg font-semibold rounded-xl"
+              >
+                Create AI Receptionist
+              </button>
+
+              <!-- Progress -->
+              <div id="agent-progress" class="hidden mt-6 text-center">
+                <div class="w-10 h-10 mx-auto mb-3 border-2 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+                <p class="text-forge-muted text-sm">Creating your AI receptionist...</p>
+              </div>
+
+              <!-- Error -->
+              <div id="agent-error" class="hidden mt-6 bg-red-500/10 border border-red-500/20 rounded-xl p-4">
+                <div class="flex items-center gap-3">
+                  <svg class="w-5 h-5 text-red-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                  </svg>
+                  <p id="agent-error-message" class="text-red-400 text-sm"></p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Agent Created Result -->
+            <div id="agent-result" class="hidden">
+              <div class="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-5 mb-6">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+                    <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <p class="font-semibold text-emerald-400">AI Receptionist Created!</p>
+                    <p id="agent-name" class="text-sm text-forge-muted"></p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Embed Code -->
+              <div class="bg-white/[0.02] border border-white/[0.04] rounded-xl p-5">
+                <div class="flex items-center justify-between mb-3">
+                  <p class="text-xs text-forge-muted uppercase tracking-wider">Embed Code</p>
+                  <button
+                    type="button"
+                    id="copy-embed-btn"
+                    class="text-xs text-amber-400 hover:text-amber-300 font-medium flex items-center gap-1"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                    </svg>
+                    Copy
+                  </button>
+                </div>
+                <pre id="embed-code" class="font-mono text-xs bg-forge-bg p-4 rounded-lg overflow-x-auto whitespace-pre-wrap text-forge-muted"></pre>
+              </div>
+
+              <!-- Create Another -->
+              <button
+                type="button"
+                id="create-another-agent-btn"
+                class="mt-6 w-full py-3 border border-white/10 hover:border-white/20 text-forge-text font-medium rounded-xl transition-colors"
+              >
+                Create Another Agent
+              </button>
             </div>
           </div>
         </div>
@@ -1149,6 +1259,140 @@
         showSection('error');
       }
     }
+
+    // ==========================================
+    // AI Receptionist Agent Creation
+    // ==========================================
+
+    let selectedAgentType = 'voice';
+    let retellConfigured = false;
+
+    async function checkAgentServiceStatus() {
+      try {
+        const response = await fetch(`${API_BASE}/agent/status`);
+        const status = await response.json();
+        retellConfigured = status.configured;
+
+        if (!retellConfigured) {
+          document.getElementById('agent-create-ui').classList.add('hidden');
+          document.getElementById('agent-not-configured').classList.remove('hidden');
+        }
+      } catch {
+        // Keep default UI
+      }
+    }
+
+    function initAgentUI() {
+      const agentTypeBtns = document.querySelectorAll('.agent-type-btn');
+      const createAgentBtn = document.getElementById('create-agent-btn');
+      const copyEmbedBtn = document.getElementById('copy-embed-btn');
+      const createAnotherBtn = document.getElementById('create-another-agent-btn');
+
+      // Agent type selection
+      agentTypeBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          selectedAgentType = btn.dataset.type;
+
+          agentTypeBtns.forEach(b => {
+            if (b.dataset.type === selectedAgentType) {
+              b.classList.remove('border-white/10', 'text-forge-muted');
+              b.classList.add('border-amber-500', 'bg-amber-500/10', 'text-amber-400');
+            } else {
+              b.classList.remove('border-amber-500', 'bg-amber-500/10', 'text-amber-400');
+              b.classList.add('border-white/10', 'text-forge-muted');
+            }
+          });
+        });
+      });
+
+      // Create agent
+      createAgentBtn.addEventListener('click', async () => {
+        if (!activeSiteId) {
+          showAgentError('Please select a site first');
+          return;
+        }
+
+        const site = sites.find(s => s.id === activeSiteId);
+        if (!site) {
+          showAgentError('Site not found');
+          return;
+        }
+
+        // Show progress
+        createAgentBtn.disabled = true;
+        createAgentBtn.classList.add('opacity-50');
+        document.getElementById('agent-progress').classList.remove('hidden');
+        document.getElementById('agent-error').classList.add('hidden');
+
+        try {
+          const response = await fetch(`${API_BASE}/agent/create`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              businessName: site.name,
+              location: site.location,
+              agentType: selectedAgentType,
+            }),
+          });
+
+          const result = await response.json();
+
+          if (!response.ok) {
+            throw new Error(result.error || 'Failed to create agent');
+          }
+
+          // Show success
+          document.getElementById('agent-progress').classList.add('hidden');
+          document.getElementById('agent-create-ui').classList.add('hidden');
+          document.getElementById('agent-result').classList.remove('hidden');
+          document.getElementById('agent-name').textContent = result.agent.agentName;
+          document.getElementById('embed-code').textContent = result.embedCode;
+
+        } catch (err) {
+          document.getElementById('agent-progress').classList.add('hidden');
+          showAgentError(err.message);
+        } finally {
+          createAgentBtn.disabled = false;
+          createAgentBtn.classList.remove('opacity-50');
+        }
+      });
+
+      // Copy embed code
+      copyEmbedBtn.addEventListener('click', () => {
+        const code = document.getElementById('embed-code').textContent;
+        navigator.clipboard.writeText(code).then(() => {
+          copyEmbedBtn.innerHTML = `
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+            Copied!
+          `;
+          setTimeout(() => {
+            copyEmbedBtn.innerHTML = `
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+              </svg>
+              Copy
+            `;
+          }, 2000);
+        });
+      });
+
+      // Create another
+      createAnotherBtn.addEventListener('click', () => {
+        document.getElementById('agent-result').classList.add('hidden');
+        document.getElementById('agent-create-ui').classList.remove('hidden');
+      });
+    }
+
+    function showAgentError(message) {
+      document.getElementById('agent-error').classList.remove('hidden');
+      document.getElementById('agent-error-message').textContent = message;
+    }
+
+    // Check service status on load
+    checkAgentServiceStatus();
+    initAgentUI();
 
     init();
   </script>

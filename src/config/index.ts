@@ -10,6 +10,7 @@ const configSchema = z.object({
   GOOGLE_PLACES_API_KEY: z.string().optional(),
   FIRECRAWL_API_KEY: z.string().optional(),
   APIFY_API_TOKEN: z.string().optional(),
+  RETELL_API_KEY: z.string().optional(),
   VERCEL_TOKEN: z.string().min(1, 'VERCEL_TOKEN is required'),
   VERCEL_TEAM_ID: z.string().optional(),
   TWENTY_FIRST_API_KEY: z.string().optional(),
@@ -39,6 +40,7 @@ function loadConfig() {
       firecrawl: result.data.FIRECRAWL_API_KEY,
       apify: result.data.APIFY_API_TOKEN,
       twentyFirst: result.data.TWENTY_FIRST_API_KEY,
+      retell: result.data.RETELL_API_KEY,
     },
     vercel: {
       token: result.data.VERCEL_TOKEN,

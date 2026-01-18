@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { generatorService } from '../services/generator.service.js';
+import { retellService } from '../services/retell.service.js';
 import logger from '../utils/logger.js';
 
 const router = Router();
@@ -143,6 +144,103 @@ router.get('/health', (req: Request, res: Response) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
+    retellConfigured: retellService.isConfigured(),
+  });
+});
+
+// Agent creation validation schema
+const createAgentSchema = z.object({
+  businessName: z.string().min(1, 'Business name is required'),
+  location: z.string().optional(),
+  additionalInfo: z.string().optional(),
+  agentType: z.enum(['voice', 'chat']).default('voice'),
+  voiceId: z.string().optional(),
+});
+
+/**
+ * POST /api/agent/create
+ * Create a Retell AI voice/chat agent for the customer
+ */
+router.post('/agent/create', async (req: Request, res: Response) => {
+  try {
+    if (!retellService.isConfigured()) {
+      return res.status(503).json({
+        error: 'AI Receptionist service not configured',
+        details: 'RETELL_API_KEY is not set',
+      });
+    }
+
+    const validation = createAgentSchema.safeParse(req.body);
+
+    if (!validation.success) {
+      return res.status(400).json({
+        error: 'Validation failed',
+        details: validation.error.flatten(),
+      });
+    }
+
+    const { businessName, location, additionalInfo, agentType, voiceId } = validation.data;
+
+    logger.info('Creating AI agent', { businessName, agentType });
+
+    const result = await retellService.createAgent({
+      businessInfo: {
+        businessName,
+        location,
+        additionalInfo,
+      },
+      agentType,
+      voiceId,
+    });
+
+    if (!result.success) {
+      logger.error('Agent creation failed', { error: result.error });
+      return res.status(500).json({
+        error: result.error,
+      });
+    }
+
+    res.status(201).json({
+      success: true,
+      agent: result.agent,
+      embedCode: result.embedCode,
+      message: `AI ${agentType} agent created successfully`,
+    });
+
+  } catch (err) {
+    logger.error('Agent creation endpoint error', { error: (err as Error).message });
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/agent/voices
+ * List available voice options
+ */
+router.get('/agent/voices', async (req: Request, res: Response) => {
+  try {
+    if (!retellService.isConfigured()) {
+      return res.status(503).json({
+        error: 'AI Receptionist service not configured',
+      });
+    }
+
+    const result = await retellService.listVoices();
+    res.json(result);
+  } catch (err) {
+    logger.error('List voices error', { error: (err as Error).message });
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/agent/status
+ * Check if Retell is configured
+ */
+router.get('/agent/status', (req: Request, res: Response) => {
+  res.json({
+    configured: retellService.isConfigured(),
+    available: retellService.isConfigured(),
   });
 });
 
