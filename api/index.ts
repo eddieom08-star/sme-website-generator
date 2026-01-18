@@ -801,33 +801,47 @@ Visual Effects: ${design.effects.join(', ')}
 
 ## LAYOUT SECTIONS (in order)
 1. **Navigation**: Sticky, minimal, with smooth scroll links. Logo left, links right.
-2. **Hero**: ${design.heroStyle}. Bold headline with the tagline. Clear CTA button.
+2. **Hero**: ${design.heroStyle}. Bold headline with the tagline. Clear CTA button.${extractedData.images?.length > 0 ? ' USE THE FIRST BUSINESS IMAGE as hero background or featured image.' : ''}
 3. **Trust Bar**: Rating stars, review count, key differentiators in a subtle row.
 4. **Services/Menu**: Grid or cards showcasing 3-6 key offerings with icons/emojis.
-5. **About**: Split layout - compelling story on one side, key stats/highlights on other.
-6. **Reviews/Testimonials**: IMPORTANT - Create an eye-catching testimonials section:
+5. **About**: Split layout - compelling story on one side, ${extractedData.images?.length >= 2 ? 'USE THE SECOND BUSINESS IMAGE on the other side' : 'key stats/highlights on other'}.
+${extractedData.images?.length >= 3 ? `6. **Gallery**: Showcase the business with a responsive image grid using the remaining images. Use masonry or uniform grid layout with hover zoom effects.` : ''}
+${extractedData.images?.length >= 3 ? '7' : '6'}. **Reviews/Testimonials**: IMPORTANT - Create an eye-catching testimonials section:
    - Use a card-based layout (2-3 columns on desktop, 1 on mobile)
    - Each card should display: star rating (use ★ filled and ☆ empty), the quote in elegant typography, author name, and "Google Review" badge
    - Add subtle background patterns or gradients to make this section visually distinct
    - Include a "See All Reviews" link to Google Maps if rating data exists
    - Use quote marks or decorative elements to frame each testimonial
    - Stagger card heights or use masonry layout for visual interest
-7. **Contact**: Two-column - contact info/hours on left, simple form on right.
-8. **Footer**: Logo, quick links, social icons, copyright.
+${extractedData.images?.length >= 3 ? '8' : '7'}. **Contact**: Two-column - contact info/hours on left, simple form on right.
+${extractedData.images?.length >= 3 ? '9' : '8'}. **Footer**: Logo, quick links, social icons, copyright.
 
-## BUSINESS IMAGES
+## BUSINESS IMAGES - MANDATORY IF AVAILABLE
 ${extractedData.images && extractedData.images.length > 0 ? `
-The following REAL business images are available - USE THEM in the website:
+**CRITICAL: You MUST use these REAL business images in the website. Do NOT use placeholder divs when real images exist.**
+
+Available images:
 ${extractedData.images.map((img: string, i: number) => `${i + 1}. ${img}`).join('\n')}
 
-Use these images in:
-- Hero section background or featured image
-- About section
-- Gallery/portfolio section (if applicable)
-- Any other relevant sections
+**REQUIRED IMAGE USAGE:**
+1. **Hero Section** - Use image #1 as:
+   \`<img src="${extractedData.images[0]}" alt="${extractedData.business?.name || 'Business'}" class="w-full h-[70vh] object-cover">\`
+   OR as a background: \`style="background-image: url('${extractedData.images[0]}')"\`
 
-Apply proper styling: object-fit: cover, appropriate aspect ratios, subtle hover effects.
-` : 'No business images available - use elegant placeholder divs with brand colors.'}
+${extractedData.images.length >= 2 ? `2. **About Section** - Use image #2:
+   \`<img src="${extractedData.images[1]}" alt="About us" class="rounded-2xl object-cover">\`` : ''}
+
+${extractedData.images.length >= 3 ? `3. **Gallery/Services Section** - Use remaining images in a grid:
+   ${extractedData.images.slice(2).map((img: string, i: number) => `<img src="${img}" alt="Gallery ${i + 3}" class="rounded-xl object-cover aspect-square">`).join('\n   ')}` : ''}
+
+**IMAGE STYLING REQUIREMENTS:**
+- Always use \`object-fit: cover\` to prevent stretching
+- Add \`loading="lazy"\` for performance
+- Include meaningful alt text
+- Apply hover effects: \`hover:scale-105 transition-transform duration-300\`
+- Use appropriate aspect ratios (hero: 16:9 or full-height, gallery: 1:1 or 4:3)
+- Add subtle shadows or borders that match the design system
+` : '**No business images available** - Create elegant placeholder sections using brand colors with subtle patterns or gradients. Do NOT use broken image links or placeholder.com URLs.'}
 
 ## CRITICAL DESIGN RULES
 - NO generic blue/purple gradients
@@ -836,8 +850,9 @@ Apply proper styling: object-fit: cover, appropriate aspect ratios, subtle hover
 - Generous whitespace - let elements breathe
 - Shadows should be atmospheric, not flat drop-shadows
 - Buttons: distinctive styling that matches the aesthetic (not generic rounded pills)
-- Images: ${extractedData.images?.length > 0 ? 'USE THE PROVIDED REAL IMAGES with proper styling' : 'use elegant placeholder divs with brand colors'}
+${extractedData.images?.length > 0 ? `- **IMAGES ARE MANDATORY**: You MUST include <img> tags with the exact URLs provided above. The images array has ${extractedData.images.length} real images - use ALL of them.` : '- No images available - use elegant color blocks with brand colors as visual elements'}
 - Micro-interactions on hover states for all interactive elements
+- Every image must have: object-fit:cover, loading="lazy", meaningful alt text, and hover effects
 - REVIEWS ARE SOCIAL PROOF: If testimonials exist, make that section visually prominent with:
   - Large decorative quotation marks (use CSS ::before/::after)
   - Star ratings using golden/yellow color for filled stars
