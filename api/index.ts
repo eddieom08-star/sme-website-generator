@@ -282,7 +282,7 @@ app.post('/api/agent/create', async (req, res) => {
       {
         general_prompt: prompt,
         begin_message: `Hello, thank you for calling ${businessName}. How can I help you today?`,
-        model: 'claude-3-5-sonnet',
+        model: 'gpt-4o',
         start_speaker: 'agent',
       },
       {
