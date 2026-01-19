@@ -161,8 +161,202 @@ app.get('/api/health', (req, res) => {
       apifyInspiration: !!APIFY_TOKEN,
       anthropicAI: !!process.env.ANTHROPIC_API_KEY,
       vercelDeploy: !!process.env.VERCEL_TOKEN,
+      retellAgent: !!process.env.RETELL_API_KEY,
     }
   });
+});
+
+// ==========================================
+// AI Receptionist Agent Endpoints
+// ==========================================
+
+const RETELL_API_KEY = process.env.RETELL_API_KEY;
+const RETELL_BASE_URL = 'https://api.retellai.com';
+
+function generateAgentPrompt(businessName: string, location?: string, additionalInfo?: string): string {
+  const locationStr = location ? ` in ${location}` : '';
+  const additionalContext = additionalInfo ? `\n\n## Additional Context\n${additionalInfo}` : '';
+
+  return `## Identity
+You are a friendly and professional AI receptionist for ${businessName}${locationStr}. You help callers with inquiries, provide information about the business, and assist with scheduling or directing calls.
+
+## Style
+- Warm, professional, and helpful
+- Speak naturally and conversationally
+- Keep responses concise (under 2 sentences when possible)
+- Be patient with callers who need clarification
+
+## Greeting
+"Hello, thank you for calling ${businessName}. How can I help you today?"
+
+## Core Capabilities
+1. Answer general questions about the business
+2. Collect caller information (name, phone, reason for call)
+3. Help schedule callbacks or appointments
+4. Direct urgent matters appropriately
+
+## Information Collection
+When a caller has a specific inquiry, collect:
+- Caller's name
+- Best callback number
+- Reason for their call
+- Preferred callback time (if applicable)
+
+## Response Guidelines
+- If you don't know something specific, offer to have someone call them back
+- For urgent matters, acknowledge the urgency and assure prompt follow-up
+- Always end calls professionally: "Is there anything else I can help you with?"
+
+## Boundaries
+- Don't make promises about specific services or pricing
+- Don't share confidential business information
+- Transfer to a human if the caller requests it${additionalContext}`;
+}
+
+function generateEmbedCode(agentId: string, agentType: 'voice' | 'chat'): string {
+  if (agentType === 'chat') {
+    return `<!-- Retell AI Chat Widget -->
+<script src="https://cdn.retellai.com/chat-embed.js"></script>
+<script>
+  RetellChat.init({
+    agentId: "${agentId}",
+    position: "bottom-right"
+  });
+</script>`;
+  }
+
+  return `<!-- Retell AI Voice Widget -->
+<script src="https://cdn.retellai.com/voice-embed.js"></script>
+<script>
+  RetellVoice.init({
+    agentId: "${agentId}",
+    buttonText: "Call Us",
+    position: "bottom-right"
+  });
+</script>`;
+}
+
+// Agent status - check if configured
+app.get('/api/agent/status', (_req, res) => {
+  res.json({
+    configured: !!RETELL_API_KEY,
+    available: !!RETELL_API_KEY,
+  });
+});
+
+// Agent creation validation schema
+const createAgentSchema = z.object({
+  businessName: z.string().min(1, 'Business name is required'),
+  location: z.string().optional(),
+  additionalInfo: z.string().optional(),
+  agentType: z.enum(['voice', 'chat']).default('voice'),
+  voiceId: z.string().optional(),
+});
+
+// Create agent
+app.post('/api/agent/create', async (req, res) => {
+  if (!RETELL_API_KEY) {
+    return res.status(503).json({
+      error: 'AI Receptionist service not configured',
+      details: 'RETELL_API_KEY is not set',
+    });
+  }
+
+  const validation = createAgentSchema.safeParse(req.body);
+  if (!validation.success) {
+    return res.status(400).json({
+      error: 'Validation failed',
+      details: validation.error.flatten(),
+    });
+  }
+
+  const { businessName, location, additionalInfo, agentType, voiceId } = validation.data;
+
+  try {
+    const prompt = generateAgentPrompt(businessName, location, additionalInfo);
+    const agentName = `${businessName} Receptionist`;
+
+    // Create LLM configuration first
+    const llmResponse = await axios.post(
+      `${RETELL_BASE_URL}/create-retell-llm`,
+      {
+        general_prompt: prompt,
+        begin_message: `Hello, thank you for calling ${businessName}. How can I help you today?`,
+        model: 'claude-3-5-sonnet-latest',
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${RETELL_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        timeout: 30000,
+      }
+    );
+
+    const llmData = llmResponse.data;
+
+    // Create the agent with the LLM
+    const agentResponse = await axios.post(
+      `${RETELL_BASE_URL}/create-agent`,
+      {
+        agent_name: agentName,
+        voice_id: voiceId || '11labs-Adrian',
+        llm_websocket_url: llmData.llm_websocket_url,
+        language: 'en-US',
+        response_engine: {
+          type: 'retell-llm',
+          llm_id: llmData.llm_id,
+        },
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${RETELL_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        timeout: 30000,
+      }
+    );
+
+    const agentData = agentResponse.data;
+    const embedCode = generateEmbedCode(agentData.agent_id, agentType);
+
+    console.log('Retell agent created:', agentData.agent_id, 'for', businessName);
+
+    res.status(201).json({
+      success: true,
+      agent: {
+        agentId: agentData.agent_id,
+        agentName: agentName,
+        voiceId: voiceId || '11labs-Adrian',
+        llmWebsocketUrl: llmData.llm_websocket_url,
+      },
+      embedCode,
+      message: `AI ${agentType} agent created successfully`,
+    });
+
+  } catch (err: any) {
+    console.error('Agent creation failed:', err.response?.data || err.message);
+    res.status(500).json({
+      error: err.response?.data?.message || err.message || 'Failed to create agent',
+    });
+  }
+});
+
+// List available voices
+app.get('/api/agent/voices', async (_req, res) => {
+  if (!RETELL_API_KEY) {
+    return res.status(503).json({ error: 'AI Receptionist service not configured' });
+  }
+
+  try {
+    const response = await axios.get(`${RETELL_BASE_URL}/list-voices`, {
+      headers: { 'Authorization': `Bearer ${RETELL_API_KEY}` },
+      timeout: 10000,
+    });
+    res.json({ voices: response.data });
+  } catch {
+    res.json({ voices: [] });
+  }
 });
 
 // Sites list endpoint - returns completed sites from jobs and database
