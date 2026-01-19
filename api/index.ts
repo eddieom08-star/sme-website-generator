@@ -282,7 +282,8 @@ app.post('/api/agent/create', async (req, res) => {
       {
         general_prompt: prompt,
         begin_message: `Hello, thank you for calling ${businessName}. How can I help you today?`,
-        model: 'claude-3-5-sonnet-latest',
+        model: 'claude-3-5-sonnet',
+        start_speaker: 'agent',
       },
       {
         headers: {
